@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import {
+  Baloo_2,
   Barlow,
   Chakra_Petch,
   Geist_Mono,
+  Nunito,
   Press_Start_2P,
 } from "next/font/google";
 import "./globals.css";
@@ -23,6 +25,16 @@ const pressStart = Press_Start_2P({
   variable: "--font-arcade",
   subsets: ["latin"],
   weight: "400",
+});
+
+const baloo = Baloo_2({
+  variable: "--font-baloo",
+  subsets: ["latin"],
+});
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
@@ -47,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${chakraPetch.variable} ${barlow.variable} ${pressStart.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${chakraPetch.variable} ${barlow.variable} ${pressStart.variable} ${baloo.variable} ${nunito.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>

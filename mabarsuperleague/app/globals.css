@@ -63,9 +63,101 @@
   --color-steel-500: #6b7a99;
   --color-steel-600: #46587a;
   --color-steel-700: #5a6883;
-  --font-display: var(--font-sans);
-  --font-body: var(--font-barlow);
+  --font-display: var(--font-baloo);
+  --font-body: var(--font-nunito);
   --font-arcade: var(--font-arcade);
+  --font-baloo: var(--font-baloo);
+  --font-nunito: var(--font-nunito);
+}
+
+/* Animasi login "PixelPlay" */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+@keyframes big-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  12% {
+    transform: translateY(2px) scale(1.06, 0.94);
+  }
+  50% {
+    transform: translateY(-46px) scale(0.97, 1.03);
+  }
+}
+@keyframes shadow-squash {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleX(0.55);
+    opacity: 0.15;
+  }
+}
+@keyframes speedline {
+  0% {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(90px);
+    opacity: 0;
+  }
+}
+@keyframes sway {
+  0%,
+  100% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+@keyframes confetti {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translateY(-8px) rotate(40deg);
+  }
 }
 
 /* Blip arcade — kedip on/off ala "INSERT COIN" */
