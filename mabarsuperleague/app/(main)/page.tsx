@@ -147,8 +147,8 @@ export default async function HomePage() {
             </span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <h1 className="font-display text-3xl font-bold uppercase leading-none tracking-[1px] text-white sm:text-[40px]">
-              {username}
+            <h1 className="font-display text-3xl font-bold leading-none tracking-[1px] text-white sm:text-[40px]">
+              Hi, {username}
             </h1>
             <span className="text-[13px] font-semibold text-white/45">
               Member since 2024 · Jakarta, ID
