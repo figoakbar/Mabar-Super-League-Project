@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { MobileNav } from "@/components/shared/mobile-nav";
 import { NavLinks } from "@/components/shared/nav-links";
-import { logout } from "@/lib/auth/actions";
-import { getSession } from "@/lib/auth/session";
+import { UserMenu } from "@/components/shared/user-menu";
+import { API_ORIGIN } from "@/lib/admin/api";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { avatarSrc } from "@/lib/data/tournament-view";
 
 const navLinks = [
   { href: "/", label: "HOME" },
@@ -17,7 +19,7 @@ const navClass =
   "text-[12.5px] font-bold tracking-[1.5px] text-white/45 transition-colors hover:text-white";
 
 export async function SiteHeader() {
-  const session = await getSession();
+  const user = await getCurrentUser();
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0A0B0D]/95 backdrop-blur">
@@ -34,12 +36,12 @@ export async function SiteHeader() {
         <div className="flex items-center gap-7">
           <NavLinks links={navLinks} />
 
-          {session ? (
-            <form action={logout} className="hidden md:block">
-              <button type="submit" className={`cursor-pointer ${navClass}`}>
-                LOG OUT
-              </button>
-            </form>
+          {user ? (
+            <UserMenu
+              username={user.username}
+              avatar={avatarSrc(user.avatarUrl, API_ORIGIN)}
+              isAdmin={user.role === "admin"}
+            />
           ) : (
             <div className="hidden items-center gap-5 md:flex">
               <Link href="/login" className={navClass}>
@@ -54,7 +56,11 @@ export async function SiteHeader() {
             </div>
           )}
 
-          <MobileNav links={navLinks} isLoggedIn={Boolean(session)} />
+          <MobileNav
+            links={navLinks}
+            isLoggedIn={Boolean(user)}
+            isAdmin={user?.role === "admin"}
+          />
         </div>
       </div>
     </header>

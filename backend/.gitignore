@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# build output
+/dist
+
+# prisma (local SQLite dev db)
+/prisma/*.db
+/prisma/*.db-journal
+
+# test coverage
+/coverage
+
+# env
+.env*
+
+# logs
+*.log
+
+# misc
+.DS_Store
+
+# uploaded receipts (local dev)
+/uploads/*
+!/uploads/.gitkeep

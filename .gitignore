@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+
+# Dependencies (each app also has its own .gitignore)
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+
+# Logs & misc
+*.log
+*.tsbuildinfo
+
+# Env
+.env*

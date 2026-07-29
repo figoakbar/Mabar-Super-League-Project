@@ -1,27 +1,33 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 
 import { SESSION_COOKIE } from "@/lib/auth/constants";
 
-// NOTE: Mock session — stores the username directly in a cookie.
-// Replace with a real signed/encrypted session (e.g. JWT) when a backend exists.
-
-export async function getSession(): Promise<{ username: string } | null> {
+/**
+ * The cookie holds an opaque session token issued by the backend — never the
+ * username and never anything the browser should be able to read, so it is
+ * httpOnly and (in production) Secure.
+ */
+export async function setSessionCookie(token: string, maxAgeSeconds?: number) {
   const cookieStore = await cookies();
-  const value = cookieStore.get(SESSION_COOKIE)?.value;
-  return value ? { username: value } : null;
-}
-
-export async function createSession(username: string) {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, username, {
+  cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    // Without maxAge this is a browser-session cookie: it disappears when the
+    // browser closes. That is the "remember me unchecked" behaviour.
+    ...(maxAgeSeconds ? { maxAge: maxAgeSeconds } : {}),
   });
 }
 
-export async function deleteSession() {
+export async function getSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_COOKIE)?.value ?? null;
+}
+
+export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }

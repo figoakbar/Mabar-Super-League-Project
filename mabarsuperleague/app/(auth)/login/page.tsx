@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PasswordField } from "@/components/auth/password-field";
-import { login } from "@/lib/auth/actions";
+import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
   title: "Log in",
@@ -21,7 +20,13 @@ function RatingPill({ rating }: { rating: string }) {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string; reset?: string; error?: string }>;
+}) {
+  const { next, reset, error } = await searchParams;
+
   return (
     <main className="relative h-screen min-h-[720px] overflow-hidden bg-[#0C0C10] font-nunito">
       {/* Grid latar */}
@@ -79,64 +84,15 @@ export default function LoginPage() {
           already waiting below!
         </p>
 
-        {/* Kartu login */}
-        <form
-          action={login}
-          className="mt-2.5 flex w-full max-w-[380px] flex-col gap-3.5 rounded-3xl border border-white/[0.09] bg-[#15151b]/90 p-7 pb-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
-        >
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="email"
-              className="text-[12.5px] font-extrabold tracking-[0.4px] text-white/65"
-            >
-              EMAIL
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@email.com"
-              required
-              className="w-full rounded-xl border border-white/[0.12] bg-[#101015] px-3.5 py-3 text-[14.5px] font-semibold text-white outline-none placeholder:text-white/30 focus:border-[#FFC833]/70"
-            />
-          </div>
-
-          <PasswordField />
-
-          <div className="mt-0.5 flex items-center justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-white/55">
-              <input
-                type="checkbox"
-                name="remember"
-                className="size-[15px] accent-[#FFB800]"
-              />
-              Remember me
-            </label>
-            <Link
-              href="#"
-              className="text-[13px] font-bold text-[#FFC833] hover:text-[#FFDD66] hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-1.5 w-full cursor-pointer rounded-[14px] bg-[#FFB800] p-3.5 font-baloo text-[16.5px] font-extrabold text-[#1A1108] transition hover:-translate-y-px hover:brightness-110 active:translate-y-px"
-          >
-            Log In Now
-          </button>
-
-          <div className="text-center text-[13.5px] font-semibold text-white/50">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              className="text-[#FFC833] hover:text-[#FFDD66] hover:underline"
-            >
-              Sign up free
-            </Link>
-          </div>
-        </form>
+        <LoginForm
+          next={next}
+          errorCode={error}
+          notice={
+            reset
+              ? "Password updated. Log in with your new password."
+              : undefined
+          }
+        />
       </div>
 
       {/* Kipas kartu karakter */}

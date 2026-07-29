@@ -18,9 +18,11 @@ function isActive(pathname: string, href: string) {
 export function MobileNav({
   links,
   isLoggedIn,
+  isAdmin = false,
 }: {
   links: { href: string; label: string }[];
   isLoggedIn: boolean;
+  isAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -60,14 +62,32 @@ export function MobileNav({
             })}
 
             {isLoggedIn ? (
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className={`${itemClass} w-full cursor-pointer border-b-0 text-left text-white/60 hover:text-white`}
+              <>
+                <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className={`${itemClass} text-white/60 hover:text-white`}
                 >
-                  LOG OUT
-                </button>
-              </form>
+                  MY PROFILE
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className={`${itemClass} text-white/60 hover:text-white`}
+                  >
+                    ADMIN PANEL
+                  </Link>
+                )}
+                <form action={logout}>
+                  <button
+                    type="submit"
+                    className={`${itemClass} w-full cursor-pointer border-b-0 text-left text-[#FF8A80] hover:brightness-110`}
+                  >
+                    LOG OUT
+                  </button>
+                </form>
+              </>
             ) : (
               <>
                 <Link

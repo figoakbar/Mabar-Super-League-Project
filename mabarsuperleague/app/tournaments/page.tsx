@@ -3,23 +3,12 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
-import {
-  TournamentBrowser,
-  type OpenTournament,
-} from "@/components/tournaments/tournament-browser";
+import { TournamentBrowser } from "@/components/tournaments/tournament-browser";
+import { getCurrentUser } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
   title: "Tournaments",
 };
-
-const data: OpenTournament[] = [
-  { id: "fc5", cat: "Football", gameLabel: "EA FC", name: "MSL Championship S5 — Late Qualifier", format: "Online · Single Elimination", accent: "#4FA3E0", prize: "Rp 5.000.000", fee: "Rp 50.000", regEnds: "22 Jul 2026", filled: 26, slots: 32 },
-  { id: "gp26", cat: "Racing", gameLabel: "GRAND PRIX", name: "Grand Prix Series — Sprint Cup", format: "Online · Time Trial + Race", accent: "#4FBF8B", prize: "Rp 3.500.000", fee: "Rp 35.000", regEnds: "24 Jul 2026", filled: 14, slots: 24 },
-  { id: "sc26", cat: "Tennis", gameLabel: "SMASH COURT", name: "Smash Court Open — August Edition", format: "Online · Round Robin + Knockout", accent: "#E06055", prize: "Rp 2.000.000", fee: "Rp 25.000", regEnds: "30 Jul 2026", filled: 9, slots: 16 },
-  { id: "am26", cat: "Arcade", gameLabel: "ARCADE MANIA", name: "Arcade Clash Cup — Score Attack", format: "Online · Weekly Leaderboard", accent: "#E0A04F", prize: "Rp 1.500.000", fee: "Free", regEnds: "19 Jul 2026", filled: 48, slots: 64 },
-  { id: "tb26", cat: "Football", gameLabel: "TURBO BALL", name: "Turbo Ball Community League S2", format: "Online · League + Playoffs", accent: "#D9479A", prize: "Rp 2.500.000", fee: "Rp 30.000", regEnds: "29 Jul 2026", filled: 16, slots: 16 },
-  { id: "fl26", cat: "Football", gameLabel: "FANTASY LEAGUE", name: "Fantasy League Cup — Season 4", format: "Online · Swiss Rounds", accent: "#8E7BFF", prize: "Rp 4.000.000", fee: "Rp 40.000", regEnds: "26 Jul 2026", filled: 21, slots: 32 },
-];
 
 const star8 =
   "polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)";
@@ -118,8 +107,9 @@ function HeroArt() {
   );
 }
 
-export default function TournamentsPage() {
-  const openCount = data.filter((t) => t.filled < t.slots).length;
+export default async function TournamentsPage() {
+  const user = await getCurrentUser();
+  const username = user?.username ?? "Player";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0A0B0D] font-body text-white">
@@ -157,32 +147,6 @@ export default function TournamentsPage() {
                   How it works
                 </Link>
               </div>
-              <div className="mt-2.5 flex gap-7">
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-white">
-                    2,340
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    PLAYERS
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-white">
-                    {openCount} events
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    OPEN NOW
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-[#FFB800]">
-                    Rp 18.5M
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    TOTAL PRIZES
-                  </span>
-                </div>
-              </div>
             </div>
 
             <HeroArt />
@@ -194,7 +158,7 @@ export default function TournamentsPage() {
           id="open-tournaments"
           className="mx-auto w-full max-w-[1240px] px-6 pb-20 pt-12 sm:px-10"
         >
-          <TournamentBrowser data={data} />
+          <TournamentBrowser username={username} />
         </section>
       </main>
 

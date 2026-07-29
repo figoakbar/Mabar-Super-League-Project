@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Don't waste minutes: a newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Detect which part of the monorepo actually changed.
+  #    This is what keeps the pipeline from being naive ("build everything").
+  #    Downstream jobs read these outputs and skip themselves when irrelevant.
+  # ---------------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'mabarsuperleague/**'
+              - '.github/workflows/ci.yml'
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+
+  # ---------------------------------------------------------------------------
+  # 2. Frontend (Next.js) — runs ONLY when files under mabarsuperleague/ changed.
+  # ---------------------------------------------------------------------------
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mabarsuperleague
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mabarsuperleague/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # 3. Backend (NestJS) — runs ONLY when files under backend/ changed.
+  # ---------------------------------------------------------------------------
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate # generate the Prisma client so tsc can resolve @prisma/client
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # 4. Aggregate gate — ALWAYS runs. Make THIS the single required status check
+  #    in branch protection. A skipped frontend/backend job counts as success;
+  #    only a real failure fails the gate. Without this, a required check on a
+  #    conditionally-skipped job would block every merge.
+  # ---------------------------------------------------------------------------
+  ci:
+    if: always()
+    needs: [changes, frontend, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any triggered job failed
+        run: |
+          if [ "${{ needs.changes.result }}" = "failure" ] \
+            || [ "${{ needs.frontend.result }}" = "failure" ] \
+            || [ "${{ needs.backend.result }}" = "failure" ]; then
+            echo "::error::A required job failed."
+            exit 1
+          fi
+          echo "OK — all triggered jobs passed (skipped jobs are fine)."
