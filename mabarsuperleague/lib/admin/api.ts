@@ -133,6 +133,33 @@ export type TournamentInput = Partial<Omit<Tournament, "schedule">> & {
   schedule?: ScheduleInput[];
 };
 
+/** One month of league activity, grouped by tournament start month. */
+export type MonthlyRow = {
+  key: string;
+  tournaments: number;
+  participantsConfirmed: number;
+  participantsPending: number;
+  revenue: number;
+  prizePool: number;
+  net: number;
+};
+
+export type GameRow = {
+  game: string;
+  tournaments: number;
+  participants: number;
+  revenue: number;
+  prizePool: number;
+};
+
+export type MonthlyReport = {
+  months: MonthlyRow[];
+  byGame: GameRow[];
+  totals: Omit<MonthlyRow, "key">;
+  outstanding: { pendingReview: number; pendingValue: number };
+  users: number;
+};
+
 /** A registered account as shown in the admin Users list. */
 export type AdminUser = {
   id: string;
@@ -175,6 +202,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Reports (admin only)
+  monthlyReport: () => request<MonthlyReport>("/reports/monthly"),
+
   // The signed-in user's own profile
   updateProfile: (data: {
     username?: string;

@@ -9,6 +9,7 @@ import { MatchesModule } from "./matches/matches.module";
 import { ParticipantsModule } from "./participants/participants.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RaceResultsModule } from "./race-results/race-results.module";
+import { ReportsModule } from "./reports/reports.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 
 @Module({
@@ -20,6 +21,7 @@ import { TournamentsModule } from "./tournaments/tournaments.module";
     ParticipantsModule,
     MatchesModule,
     RaceResultsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   // Routes are closed by default; handlers opt out with @Public().

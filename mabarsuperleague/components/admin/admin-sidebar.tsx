@@ -8,6 +8,7 @@ import {
   Swords,
   UserCog,
   ClipboardCheck,
+  ChartColumn,
   ArrowLeft,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ const links = [
   },
   { href: "/admin/matches", label: "Matches & Scores", icon: Swords },
   // Participants are managed inside each tournament row on /admin/tournaments.
+  { href: "/admin/reports", label: "Reports", icon: ChartColumn },
   { href: "/admin/users", label: "Users", icon: UserCog },
 ];
 
