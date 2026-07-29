@@ -1,0 +1,134 @@
+// Dev uses SQLite for zero-setup local runs. To move to Postgres, change
+// `provider` to "postgresql" and point DATABASE_URL at your Postgres instance —
+// the models below are portable as-is.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A registered account. `passwordHash` is null for Google-only sign-ups.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String?
+  role         String   @default("user") // user | admin
+  phone        String   @default("")
+  consoleId    String   @default("")
+  pcId         String   @default("")
+  instagram    String   @default("")
+  googleId     String?  @unique
+  avatarUrl    String   @default("")
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions      Session[]
+  resetTokens   PasswordResetToken[]
+}
+
+/// Opaque server-side session. Only the SHA-256 hash of the token is stored,
+/// so a database leak cannot be replayed as a login.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String   @default("")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
+}
+
+/// Single-use password reset token (hash only, short lived).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
+}
+
+model Tournament {
+  id                   String   @id @default(cuid())
+  name                 String
+  game                 String
+  description          String   @default("")
+  status               String   @default("open") // open | ongoing | completed
+  // knockout | group_knockout | racing — drives how the bracket is displayed
+  format               String   @default("knockout")
+  prizePool            Int      @default(0)
+  entryFee             Int      @default(0)
+  maxTeams             Int      @default(16)
+  startDate            String   @default("")
+  registrationDeadline String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  participants Participant[]
+  matches      Match[]
+  raceResults  RaceResult[]
+  schedule     ScheduleItem[]
+}
+
+/// Timeline entries an admin sets per tournament (bracket draw, round dates,
+/// finals…). Rendered on the public tournament page's Schedule panel.
+model ScheduleItem {
+  id           String     @id @default(cuid())
+  label        String
+  date         String     @default("") // yyyy-mm-dd
+  time         String     @default("") // free text, e.g. "19:00 WIB"
+  position     Int        @default(0) // display order
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+/// Results for racing-format tournaments: one row per driver per session.
+model RaceResult {
+  id           String     @id @default(cuid())
+  session      String // practice | qualifying | race
+  driver       String
+  position     Int?
+  lapTime      String     @default("") // e.g. 1:32.451
+  notes        String     @default("")
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+model Participant {
+  id           String     @id @default(cuid())
+  team         String
+  captain      String     @default("")
+  contact      String     @default("")
+  status       String     @default("pending") // pending | confirmed | rejected
+  receiptUrl   String? // uploaded payment proof, e.g. /uploads/abc.jpg
+  reviewedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+model Match {
+  id           String     @id @default(cuid())
+  round        String     @default("")
+  teamA        String
+  teamB        String
+  scoreA       Int?
+  scoreB       Int?
+  status       String     @default("scheduled") // scheduled | completed
+  playedAt     String     @default("")
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}

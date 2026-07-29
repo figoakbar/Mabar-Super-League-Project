@@ -2,17 +2,36 @@
 
 import { useState } from "react";
 
-export function PasswordField() {
+export const authInputClass =
+  "w-full rounded-xl border border-white/[0.12] bg-[#101015] px-3.5 py-3 text-[14.5px] font-semibold text-white outline-none placeholder:text-white/30 focus:border-[#FFC833]/70";
+
+export function PasswordField({
+  name = "password",
+  label = "PASSWORD",
+  value,
+  onChange,
+  invalid = false,
+  autoComplete = "new-password",
+  hint,
+}: {
+  name?: string;
+  label?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  invalid?: boolean;
+  autoComplete?: string;
+  hint?: string;
+}) {
   const [show, setShow] = useState(false);
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <label
-          htmlFor="password"
+          htmlFor={name}
           className="text-[12.5px] font-extrabold tracking-[0.4px] text-white/65"
         >
-          PASSWORD
+          {label}
         </label>
         <button
           type="button"
@@ -23,13 +42,21 @@ export function PasswordField() {
         </button>
       </div>
       <input
-        id="password"
-        name="password"
+        id={name}
+        name={name}
         type={show ? "text" : "password"}
         placeholder="••••••••"
         required
-        className="w-full rounded-xl border border-white/[0.12] bg-[#101015] px-3.5 py-3 text-[14.5px] font-semibold text-white outline-none placeholder:text-white/30 focus:border-[#FFC833]/70"
+        autoComplete={autoComplete}
+        aria-invalid={invalid || undefined}
+        {...(onChange
+          ? { value: value ?? "", onChange: (e) => onChange(e.target.value) }
+          : {})}
+        className={`${authInputClass} ${invalid ? "border-[#FF8A80]/70" : ""}`}
       />
+      {hint && (
+        <span className="text-[11.5px] font-semibold text-white/35">{hint}</span>
+      )}
     </div>
   );
 }
