@@ -89,9 +89,10 @@ export function TournamentsAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** Start-date filters. "" means "any". */
+  /** Filters. "" means "any". */
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
+  const [game, setGame] = useState("");
 
   /** Which tournament's participant list is expanded, if any. */
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -207,13 +208,18 @@ export function TournamentsAdmin() {
     }
   }
 
-  // Only offer years that actually have tournaments, so the picker can never
-  // point at an empty result.
+  // Only offer years and games that actually have tournaments, so a picker can
+  // never point at an empty result.
   const years = Array.from(
     new Set(rows.map((t) => startedOn(t)?.year).filter((y): y is number => !!y)),
   ).sort((a, b) => b - a);
 
+  const games = Array.from(new Set(rows.map((t) => t.game).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b),
+  );
+
   const shown = rows.filter((t) => {
+    if (game && t.game !== game) return false;
     if (!month && !year) return true;
     const on = startedOn(t);
     if (!on) return false; // undated rows cannot match a month or year
@@ -222,11 +228,12 @@ export function TournamentsAdmin() {
     return true;
   });
 
-  const filtering = Boolean(month || year);
+  const filtering = Boolean(month || year || game);
 
   function resetFilters() {
     setMonth("");
     setYear("");
+    setGame("");
   }
 
   // Collapsing on filter change avoids a participant panel staying "open" on a
@@ -254,8 +261,22 @@ export function TournamentsAdmin() {
         </button>
       </div>
 
-      {/* Filter by when the tournament starts */}
+      {/* Filter by game, and by when the tournament starts */}
       <div className="flex flex-wrap items-end gap-3">
+        <div className="w-full sm:w-52">
+          <Select
+            label="GAME"
+            value={game}
+            onChange={(e) => changeFilter(() => setGame(e.target.value))}
+          >
+            <option value="">All games</option>
+            {games.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </Select>
+        </div>
         <div className="w-full sm:w-44">
           <Select
             label="MONTH"
@@ -333,7 +354,7 @@ export function TournamentsAdmin() {
             ) : shown.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-5 py-10 text-center text-white/40">
-                  No tournaments start in that period.{" "}
+                  No tournaments match these filters.{" "}
                   <button
                     type="button"
                     onClick={() => changeFilter(resetFilters)}
