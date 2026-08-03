@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 type Chip = { bg: string; border: string; color: string };
 
@@ -187,6 +188,133 @@ const allPlayers: Player[] = [
 const sectionLabel =
   "text-xs font-extrabold tracking-[1px] text-white/40";
 
+/** The player's stats card — shared by the desktop side panel and the mobile popup. */
+function ProfileCard({ sel }: { sel: Player }) {
+  return (
+    <>
+      <div className="h-[3px]" style={{ background: sel.accent }} />
+      <div className="flex flex-col gap-[18px] p-[26px] pb-6">
+        <div className="flex items-center gap-4">
+          <div
+            className="grid size-[68px] shrink-0 place-items-center rounded-[20px]"
+            style={{ background: sel.avatarBg }}
+          >
+            <span className="font-display text-2xl font-extrabold text-white">
+              {sel.initials}
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-col gap-[3px]">
+            <span className="truncate font-display text-2xl font-extrabold text-white">
+              {sel.name}
+            </span>
+            <span className="text-[12.5px] font-bold text-white/45">
+              {sel.city} · Member since {sel.since}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex border-y border-white/[0.08] py-3.5">
+          {(
+            [
+              [sel.w, "WINS", "#6FCF97"],
+              [sel.l, "LOSSES", "#E07A72"],
+              [sel.trophies, "TROPHIES", "#FFB800"],
+              [`${sel.wr}%`, "WIN RATE", "#FFFFFF"],
+            ] as const
+          ).map(([value, label, color], i) => (
+            <div
+              key={label}
+              className={`flex flex-1 flex-col items-center gap-px ${
+                i > 0 ? "border-l border-white/[0.08]" : ""
+              }`}
+            >
+              <span
+                className="font-display text-xl font-extrabold"
+                style={{ color }}
+              >
+                {value}
+              </span>
+              <span className="text-[10.5px] font-extrabold tracking-[1px] text-white/40">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <span className={sectionLabel}>GAME RECORDS</span>
+          {sel.records.map((g) => (
+            <div key={g.game} className="flex items-center gap-3">
+              <span className="w-[110px] shrink-0 text-[13px] font-extrabold text-white">
+                {g.game}
+              </span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: g.barW, background: g.color }}
+                />
+              </div>
+              <span className="w-16 shrink-0 text-right text-[12.5px] font-extrabold text-white/60">
+                {g.w}W · {g.l}L
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <span className={sectionLabel}>ACHIEVEMENTS</span>
+          <div className="flex flex-wrap gap-2">
+            {sel.badges.map((b) => (
+              <div
+                key={b.label}
+                className="rounded-full border px-[13px] py-1.5 text-[11.5px] font-extrabold"
+                style={{
+                  background: b.bg,
+                  borderColor: b.border,
+                  color: b.color,
+                }}
+              >
+                {b.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <span className={sectionLabel}>TOURNAMENT HISTORY</span>
+          <div className="flex flex-col">
+            {sel.tournaments.map((t) => (
+              <div
+                key={t.name + t.date}
+                className="flex items-center gap-3 border-b border-white/[0.05] py-2.5 last:border-0"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-px">
+                  <span className="truncate text-[13px] font-extrabold text-white">
+                    {t.name}
+                  </span>
+                  <span className="text-[11.5px] font-bold text-white/40">
+                    {t.game} · {t.date}
+                  </span>
+                </div>
+                <div
+                  className="shrink-0 whitespace-nowrap rounded-full border px-[11px] py-1 text-[10.5px] font-extrabold"
+                  style={{
+                    background: t.bg,
+                    borderColor: t.border,
+                    color: t.color,
+                  }}
+                >
+                  {t.result}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function PlayersBrowser({ username }: { username: string }) {
   const players = allPlayers.map((p) =>
     p.isYou
@@ -196,6 +324,34 @@ export function PlayersBrowser({ username }: { username: string }) {
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(players[0].name);
+  // On mobile the profile opens as a popup; on desktop it's the side panel.
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  function openPlayer(name: string) {
+    setSelected(name);
+    // Only pop up on small screens — desktop keeps showing the side panel.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 1023px)").matches
+    ) {
+      setMobileOpen(true);
+    }
+  }
+
+  // While the popup is open, lock background scroll and let Escape dismiss it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
 
   const q = query.trim().toLowerCase();
 
@@ -269,7 +425,7 @@ export function PlayersBrowser({ username }: { username: string }) {
               <button
                 key={p.name}
                 type="button"
-                onClick={() => setSelected(p.name)}
+                onClick={() => openPlayer(p.name)}
                 className="flex w-full cursor-pointer items-center gap-3.5 rounded-[14px] border px-[18px] py-3.5 text-left transition hover:translate-x-1 hover:border-white/25"
                 style={{
                   background: isSel ? "rgba(255,184,0,0.06)" : "#101114",
@@ -315,129 +471,38 @@ export function PlayersBrowser({ username }: { username: string }) {
           )}
         </div>
 
-        {/* Profile panel */}
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#101114] lg:sticky lg:top-24">
-          <div className="h-[3px]" style={{ background: sel.accent }} />
-          <div className="flex flex-col gap-[18px] p-[26px] pb-6">
-            <div className="flex items-center gap-4">
-              <div
-                className="grid size-[68px] shrink-0 place-items-center rounded-[20px]"
-                style={{ background: sel.avatarBg }}
-              >
-                <span className="font-display text-2xl font-extrabold text-white">
-                  {sel.initials}
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col gap-[3px]">
-                <span className="truncate font-display text-2xl font-extrabold text-white">
-                  {sel.name}
-                </span>
-                <span className="text-[12.5px] font-bold text-white/45">
-                  {sel.city} · Member since {sel.since}
-                </span>
-              </div>
-            </div>
+        {/* Profile panel — desktop side column. On mobile it's replaced by the popup. */}
+        <div className="hidden overflow-hidden rounded-2xl border border-white/10 bg-[#101114] lg:sticky lg:top-24 lg:block">
+          <ProfileCard sel={sel} />
+        </div>
+      </section>
 
-            <div className="flex border-y border-white/[0.08] py-3.5">
-              {(
-                [
-                  [sel.w, "WINS", "#6FCF97"],
-                  [sel.l, "LOSSES", "#E07A72"],
-                  [sel.trophies, "TROPHIES", "#FFB800"],
-                  [`${sel.wr}%`, "WIN RATE", "#FFFFFF"],
-                ] as const
-              ).map(([value, label, color], i) => (
-                <div
-                  key={label}
-                  className={`flex flex-1 flex-col items-center gap-px ${
-                    i > 0 ? "border-l border-white/[0.08]" : ""
-                  }`}
-                >
-                  <span
-                    className="font-display text-xl font-extrabold"
-                    style={{ color }}
-                  >
-                    {value}
-                  </span>
-                  <span className="text-[10.5px] font-extrabold tracking-[1px] text-white/40">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <span className={sectionLabel}>GAME RECORDS</span>
-              {sel.records.map((g) => (
-                <div key={g.game} className="flex items-center gap-3">
-                  <span className="w-[110px] shrink-0 text-[13px] font-extrabold text-white">
-                    {g.game}
-                  </span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: g.barW, background: g.color }}
-                    />
-                  </div>
-                  <span className="w-16 shrink-0 text-right text-[12.5px] font-extrabold text-white/60">
-                    {g.w}W · {g.l}L
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <span className={sectionLabel}>ACHIEVEMENTS</span>
-              <div className="flex flex-wrap gap-2">
-                {sel.badges.map((b) => (
-                  <div
-                    key={b.label}
-                    className="rounded-full border px-[13px] py-1.5 text-[11.5px] font-extrabold"
-                    style={{
-                      background: b.bg,
-                      borderColor: b.border,
-                      color: b.color,
-                    }}
-                  >
-                    {b.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <span className={sectionLabel}>TOURNAMENT HISTORY</span>
-              <div className="flex flex-col">
-                {sel.tournaments.map((t) => (
-                  <div
-                    key={t.name + t.date}
-                    className="flex items-center gap-3 border-b border-white/[0.05] py-2.5 last:border-0"
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col gap-px">
-                      <span className="truncate text-[13px] font-extrabold text-white">
-                        {t.name}
-                      </span>
-                      <span className="text-[11.5px] font-bold text-white/40">
-                        {t.game} · {t.date}
-                      </span>
-                    </div>
-                    <div
-                      className="shrink-0 whitespace-nowrap rounded-full border px-[11px] py-1 text-[10.5px] font-extrabold"
-                      style={{
-                        background: t.bg,
-                        borderColor: t.border,
-                        color: t.color,
-                      }}
-                    >
-                      {t.result}
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* Mobile: player detail as a popup instead of an inline panel below the list. */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close profile"
+              className="absolute right-3 top-3 z-10 grid size-8 cursor-pointer place-items-center rounded-lg bg-black/50 text-white/70 backdrop-blur transition-colors hover:bg-black/70 hover:text-white"
+            >
+              <X className="size-4" />
+            </button>
+            <div className="max-h-[86vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-white/10 bg-[#101114] shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+              <ProfileCard sel={sel} />
             </div>
           </div>
         </div>
-      </section>
+      )}
     </>
   );
 }
