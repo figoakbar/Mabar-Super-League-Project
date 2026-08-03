@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { X } from "lucide-react";
 
 import { API_ORIGIN, type PublicPlayer } from "@/lib/admin/api";
@@ -108,33 +108,54 @@ function toView(p: PublicPlayer, isYou: boolean): PlayerView {
 function Avatar({
   view,
   size,
-  rounded,
+  radius,
   textCls,
 }: {
   view: PlayerView;
   size: number;
-  rounded: string;
+  radius: number;
   textCls: string;
 }) {
   const src = avatarSrc(view.avatarUrl, API_ORIGIN);
+  // Sizing/clipping is done with inline styles, not Tailwind utilities, so a
+  // stale CSS chunk can't drop `size-full`/`object-cover` and leave the photo
+  // rendering at its natural aspect (which showed only the top half). The box
+  // is a fixed square; flex-basis pins it inside the flex rows it lives in.
+  const box: CSSProperties = {
+    width: size,
+    height: size,
+    flex: `0 0 ${size}px`,
+    borderRadius: radius,
+    overflow: "hidden",
+  };
   if (src) {
     return (
-      <div
-        className={`shrink-0 overflow-hidden ${rounded}`}
-        style={{ width: size, height: size }}
-      >
+      <span style={{ ...box, display: "block" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="size-full object-cover" />
-      </div>
+        <img
+          src={src}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </span>
     );
   }
   return (
-    <div
-      className={`grid shrink-0 place-items-center ${rounded}`}
-      style={{ width: size, height: size, background: view.avatarBg }}
+    <span
+      style={{
+        ...box,
+        display: "grid",
+        placeItems: "center",
+        background: view.avatarBg,
+      }}
     >
       <span className={textCls}>{view.initials}</span>
-    </div>
+    </span>
   );
 }
 
@@ -148,7 +169,7 @@ function ProfileCard({ p }: { p: PlayerView }) {
           <Avatar
             view={p}
             size={68}
-            rounded="rounded-[20px]"
+            radius={20}
             textCls="font-display text-2xl font-extrabold text-white"
           />
           <div className="flex min-w-0 flex-col gap-[3px]">
@@ -397,7 +418,7 @@ export function PlayersBrowser({
                 <Avatar
                   view={p}
                   size={44}
-                  rounded="rounded-xl"
+                  radius={12}
                   textCls="font-display text-sm font-extrabold text-white"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-px">
