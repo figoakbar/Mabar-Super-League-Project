@@ -7,6 +7,7 @@ import { AuthGuard } from "./auth/auth.guard";
 import { AuthModule } from "./auth/auth.module";
 import { MatchesModule } from "./matches/matches.module";
 import { ParticipantsModule } from "./participants/participants.module";
+import { PlayersModule } from "./players/players.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RaceResultsModule } from "./race-results/race-results.module";
 import { ReportsModule } from "./reports/reports.module";
@@ -19,6 +20,7 @@ import { TournamentsModule } from "./tournaments/tournaments.module";
     AuthModule,
     TournamentsModule,
     ParticipantsModule,
+    PlayersModule,
     MatchesModule,
     RaceResultsModule,
     ReportsModule,

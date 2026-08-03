@@ -132,6 +132,24 @@ export type TournamentDetail = Tournament & {
   matches: Match[];
 };
 
+/**
+ * A public player-directory card. Every stat is derived server-side from real
+ * match history and registrations — no private account fields are exposed.
+ */
+export type PublicPlayer = {
+  username: string;
+  avatarUrl: string;
+  memberSince: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  trophies: number;
+  mainGame: string;
+  records: { game: string; w: number; l: number }[];
+  championships: string[];
+  tournaments: { name: string; game: string; date: string; result: string }[];
+};
+
 /** Body accepted when creating or updating a tournament. */
 export type TournamentInput = Partial<Omit<Tournament, "schedule">> & {
   schedule?: ScheduleInput[];
@@ -267,6 +285,9 @@ export const api = {
     request<{ id: string; deleted: boolean }>(`/users/${id}`, {
       method: "DELETE",
     }),
+
+  // Public player directory (stats derived from real matches)
+  listPlayers: () => request<PublicPlayer[]>("/players"),
 
   // Tournaments
   listTournaments: () => request<Tournament[]>("/tournaments"),
