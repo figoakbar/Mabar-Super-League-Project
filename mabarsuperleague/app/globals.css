@@ -251,4 +251,20 @@
   html {
     @apply font-sans;
   }
+
+  /* Smooth in-page anchor jumps (e.g. "Browse Tournaments" → #open-tournaments),
+     disabled for readers who prefer reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Keep an anchored section clear of the sticky header when scrolled to. */
+  [id] {
+    scroll-margin-top: 84px;
+  }
+
+  /* The per-navigation page transition lives in app/template.tsx (a colocated
+     <style>), not here, so it stays reliable if the global stylesheet is cached. */
 }

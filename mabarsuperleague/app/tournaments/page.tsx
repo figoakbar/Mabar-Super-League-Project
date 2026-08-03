@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
+import { ScrollLink } from "@/components/shared/scroll-link";
 import { TournamentBrowser } from "@/components/tournaments/tournament-browser";
 import { getCurrentUser } from "@/lib/auth/dal";
 
@@ -134,12 +135,12 @@ export default async function TournamentsPage() {
                 and arcade games. Registration takes less than a minute.
               </p>
               <div className="mt-1.5 flex flex-wrap gap-3">
-                <Link
-                  href="#open-tournaments"
-                  className="rounded-xl bg-[#FFB800] px-[26px] py-[13px] font-display text-[15px] font-extrabold text-[#0A0B0D] transition hover:brightness-110"
+                <ScrollLink
+                  targetId="open-tournaments"
+                  className="cursor-pointer rounded-xl bg-[#FFB800] px-[26px] py-[13px] font-display text-[15px] font-extrabold text-[#0A0B0D] transition hover:brightness-110"
                 >
                   Browse Tournaments
-                </Link>
+                </ScrollLink>
                 <Link
                   href="#"
                   className="rounded-xl border border-white/[0.16] px-[26px] py-[13px] font-display text-[15px] font-bold text-white transition-colors hover:bg-white/[0.06]"
