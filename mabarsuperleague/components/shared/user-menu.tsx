@@ -132,18 +132,27 @@ export function Avatar({
   // flex parent that has no width of its own collapses to 0. Pinning the box
   // here — with `flex: 0 0 <size>` so it cannot grow or shrink either — gives
   // the image a definite containing block, whatever the surrounding layout is.
-  const box = {
+  //
+  // Every geometry-critical property is an inline style rather than a Tailwind
+  // class. Inline styles are immune to a stale/partial compiled stylesheet, so
+  // the picture can never render squished even if the CSS bundle is out of date.
+  const box: React.CSSProperties = {
     width: size,
     height: size,
     flex: `0 0 ${size}px`,
-  } as const;
+    overflow: "hidden",
+    borderRadius: rounded === "lg" ? 10 : "9999px",
+    display: "block",
+  };
+  const fill: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  };
 
   return (
-    <span
-      className={`block overflow-hidden ${rounded === "lg" ? "rounded-lg" : "rounded-full"}`}
-      style={box}
-      aria-hidden={avatar && !broken ? undefined : true}
-    >
+    <span style={box} aria-hidden={avatar && !broken ? undefined : true}>
       {avatar && !broken ? (
         // A plain <img>: avatars come from the API origin (and Google), which
         // next/image would need explicit remote-pattern config for.
@@ -154,12 +163,12 @@ export function Avatar({
           width={size}
           height={size}
           onError={() => setBroken(true)}
-          className="size-full object-cover"
+          style={fill}
         />
       ) : (
         <span
-          className="grid size-full place-items-center bg-[#FFB800] font-display font-extrabold text-[#0A0B0D]"
-          style={{ fontSize: Math.round(size * 0.4) }}
+          className="grid place-items-center bg-[#FFB800] font-display font-extrabold text-[#0A0B0D]"
+          style={{ ...fill, fontSize: Math.round(size * 0.4) }}
         >
           {username.slice(0, 2).toUpperCase()}
         </span>
