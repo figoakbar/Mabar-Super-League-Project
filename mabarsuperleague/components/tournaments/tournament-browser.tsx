@@ -132,6 +132,27 @@ export function TournamentBrowser({ username }: { username: string }) {
                   <p className="mt-[3px] text-[12.5px] font-semibold text-white/45">
                     {formatLabel(t.format)}
                   </p>
+                  {t.platforms?.trim() && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {t.platforms
+                        .split(",")
+                        .map((p) => p.trim())
+                        .filter(Boolean)
+                        .map((p) => (
+                          <span
+                            key={p}
+                            className="rounded-md border px-2 py-0.5 text-[11px] font-extrabold"
+                            style={{
+                              borderColor: `${accent}66`,
+                              background: `${accent}1f`,
+                              color: accent,
+                            }}
+                          >
+                            {p}
+                          </span>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5 px-[22px] py-4">
