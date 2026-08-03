@@ -63,6 +63,7 @@ export function Select({
 export function StatusPill({ status }: { status: string }) {
   const map: Record<string, [string, string]> = {
     open: ["rgba(79,163,224,0.14)", "#4FA3E0"],
+    closed: ["rgba(217,142,82,0.14)", "#D98E52"],
     ongoing: ["rgba(255,184,0,0.14)", "#FFB800"],
     completed: ["rgba(111,207,151,0.14)", "#6FCF97"],
     pending: ["rgba(255,184,0,0.14)", "#FFB800"],

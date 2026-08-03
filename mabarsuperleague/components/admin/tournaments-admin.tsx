@@ -474,7 +474,8 @@ export function TournamentsAdmin() {
                 value={form.status}
                 onChange={(e) => set("status")(e.target.value)}
               >
-                <option value="open">open</option>
+                <option value="open">open — registration open</option>
+                <option value="closed">closed — registration closed</option>
                 <option value="ongoing">ongoing</option>
                 <option value="completed">completed</option>
               </Select>

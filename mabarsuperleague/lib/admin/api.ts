@@ -26,7 +26,9 @@ export const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") ??
   "http://localhost:3001";
 
-export type TournamentStatus = "open" | "ongoing" | "completed";
+// open = registration open · closed = registration closed, ready to draw ·
+// ongoing = playing · completed = finished.
+export type TournamentStatus = "open" | "closed" | "ongoing" | "completed";
 
 /** Tournament format — decides how the bracket / results are displayed. */
 export type TournamentFormat = "knockout" | "group_knockout" | "racing";
@@ -86,6 +88,8 @@ export type Tournament = {
   startDate: string;
   registrationDeadline: string;
   registeredTeams: number;
+  /** How many matches exist — 0 means the draw hasn't been made yet. */
+  matchCount: number;
   schedule: ScheduleItem[];
   createdAt: string;
   updatedAt: string;
@@ -338,6 +342,12 @@ export const api = {
     request<Match[]>(
       `/matches${tournamentId ? `?tournamentId=${tournamentId}` : ""}`,
     ),
+  /** Shuffle confirmed participants into a fresh draw; returns the new matches. */
+  generateDraw: (tournamentId: string) =>
+    request<Match[]>("/matches/generate", {
+      method: "POST",
+      body: JSON.stringify({ tournamentId }),
+    }),
   createMatch: (data: Partial<Match> & { tournamentId: string }) =>
     request<Match>("/matches", {
       method: "POST",

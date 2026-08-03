@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Trophy,
   Swords,
+  Shuffle,
   UserCog,
   ClipboardCheck,
   ChartColumn,
@@ -20,6 +21,9 @@ const links = [
     label: "Registrations",
     icon: ClipboardCheck,
   },
+  // Draw the groups / bracket first; a tournament only reaches Matches & Scores
+  // once it has been drawn here.
+  { href: "/admin/drawing", label: "Drawing", icon: Shuffle },
   { href: "/admin/matches", label: "Matches & Scores", icon: Swords },
   // Participants are managed inside each tournament row on /admin/tournaments.
   { href: "/admin/reports", label: "Reports", icon: ChartColumn },

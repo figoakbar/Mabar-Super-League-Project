@@ -35,9 +35,13 @@ export function MatchesAdmin() {
   useEffect(() => {
     (async () => {
       try {
-        // Results are only recorded for tournaments that are actually running.
+        // Results are only recorded for running tournaments that already have a
+        // draw. Racing has no draw, so it always qualifies; group/knockout must
+        // be shuffled in the Drawing menu first.
         const ongoing = (await api.listTournaments()).filter(
-          (t) => t.status === "ongoing",
+          (t) =>
+            t.status === "ongoing" &&
+            (t.format === "racing" || t.matchCount > 0),
         );
         setTournaments(ongoing);
         if (ongoing.length) setSelected(ongoing[0].id);
@@ -155,7 +159,7 @@ export function MatchesAdmin() {
             Matches &amp; Scores
           </h1>
           <p className="mt-1 text-sm font-semibold text-white/45">
-            Record results for tournaments that are currently ongoing.
+            Record results for ongoing tournaments once they have been drawn.
           </p>
         </div>
         <button
@@ -176,15 +180,14 @@ export function MatchesAdmin() {
 
       {!loading && tournaments.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/[0.14] bg-[#101114] px-5 py-10 text-center text-sm font-semibold text-white/40">
-          No ongoing tournaments right now. Set a tournament&apos;s status to
-          &ldquo;ongoing&rdquo; in{" "}
+          No ongoing tournament has been drawn yet. Shuffle one in{" "}
           <Link
-            href="/admin/tournaments"
+            href="/admin/drawing"
             className="font-extrabold text-[#FFB800] hover:underline"
           >
-            Tournaments
+            Drawing
           </Link>{" "}
-          to record its results here.
+          first, then record its results here.
         </div>
       )}
 

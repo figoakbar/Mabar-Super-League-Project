@@ -53,6 +53,27 @@ function knockoutRounds(playerCount: number): string[] {
   return rounds;
 }
 
+type Seed = { a: string; b: string };
+
+/**
+ * Projected first knockout round for a group stage: the top two of each group
+ * cross over (1st of one group vs 2nd of the next), so the bracket can be shown
+ * before any group is decided. Groups are taken pairwise: A↔B, C↔D, …
+ */
+function groupSeedPairs(groupLabels: string[]): Seed[] {
+  const letters = groupLabels
+    .map((g) => g.replace(/group\s*/i, "").trim())
+    .filter(Boolean);
+  const pairs: Seed[] = [];
+  for (let i = 0; i + 1 < letters.length; i += 2) {
+    const g1 = letters[i];
+    const g2 = letters[i + 1];
+    pairs.push({ a: `1st · Group ${g1}`, b: `2nd · Group ${g2}` });
+    pairs.push({ a: `1st · Group ${g2}`, b: `2nd · Group ${g1}` });
+  }
+  return pairs;
+}
+
 type Standing = { name: string; w: number; l: number; d: number; pts: number };
 
 /** Group standings computed from completed matches (3 pts win, 1 draw). */
@@ -180,11 +201,24 @@ export function TournamentLive({
 
   // ---- bracket data ----
   const groupRounds = rounds.filter((r) => r.toLowerCase().startsWith("group"));
-  // Bracket size follows the confirmed field; before teams are in, fall back to
-  // the tournament's slot count (so a 64-slot cup starts at "Round of 64").
-  const koRounds = knockoutRounds(
-    confirmed.length || participants.length || detail?.maxTeams || 2,
-  );
+  // The knockout stage of a group tournament is sized to the qualifiers (top 2
+  // of each group), not the whole field — 4 groups → 8 → Quarterfinals. A pure
+  // knockout follows the confirmed count, falling back to the slot count so a
+  // 64-slot cup still starts at "Round of 64" before teams are in.
+  const koRounds =
+    format === "group_knockout" && groupRounds.length > 0
+      ? knockoutRounds(Math.max(2, groupRounds.length * 2))
+      : knockoutRounds(
+          confirmed.length || participants.length || detail?.maxTeams || 2,
+        );
+
+  // Before any knockout match exists we still project the first round from the
+  // groups, so the reader can see who would meet whom once the groups finish.
+  const knockoutStarted = matches.some((m) => koRounds.includes(m.round || ""));
+  const seedPairs =
+    format === "group_knockout" && groupRounds.length > 0 && !knockoutStarted
+      ? groupSeedPairs(groupRounds)
+      : [];
 
   const tabBtn = (key: typeof tab, label: string) => {
     const active = tab === key;
@@ -398,6 +432,51 @@ export function TournamentLive({
                   </div>
                 </div>
               ))
+            )}
+
+            {/* Projected knockout round from the group standings */}
+            {seedPairs.length > 0 && matchFilter === "All" && (
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-display text-base font-extrabold text-white">
+                    {koRounds[0]}
+                  </span>
+                  <span className="rounded-full border border-[#FFB800]/30 bg-[#FFB800]/10 px-2 py-0.5 text-[10px] font-extrabold tracking-[0.5px] text-[#FFB800]">
+                    PROJECTED
+                  </span>
+                  <div className="h-px flex-1 bg-white/[0.07]" />
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-dashed border-[#FFB800]/20 bg-[#FFB800]/[0.03] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="min-w-[600px] px-[22px]">
+                    {seedPairs.map((p, i) => (
+                      <div
+                        key={i}
+                        className="grid grid-cols-[104px_1fr_auto_1fr_120px] items-center gap-3.5 border-b border-white/[0.05] py-[13px] last:border-0"
+                      >
+                        <span className="w-fit rounded-md border border-[#FFB800]/30 bg-[#FFB800]/10 px-2.5 py-0.5 text-[10.5px] font-extrabold tracking-[0.8px] text-[#FFB800]">
+                          PROJECTED
+                        </span>
+                        <span className="truncate text-right text-[13.5px] font-extrabold text-white/75">
+                          {p.a}
+                        </span>
+                        <span className="whitespace-nowrap rounded-md bg-black/35 px-3.5 py-1 font-display text-[13.5px] font-extrabold text-white/45">
+                          VS
+                        </span>
+                        <span className="truncate text-[13.5px] font-extrabold text-white/75">
+                          {p.b}
+                        </span>
+                        <span className="text-right text-[11.5px] font-bold text-white/40">
+                          After groups
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <span className="text-[11.5px] font-semibold text-white/35">
+                  Top two of each group advance; the pairings lock once the group
+                  stage finishes.
+                </span>
+              </div>
             )}
           </div>
         )}
@@ -695,19 +774,35 @@ export function TournamentLive({
                                     </div>
                                   );
                                 })
-                              : Array.from({ length: expected }).map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="overflow-hidden rounded-[10px] border border-dashed border-white/[0.14] bg-black/30"
-                                  >
-                                    <div className="border-b border-white/[0.05] px-3.5 py-2.5 text-[12.5px] font-bold text-white/40">
-                                      TBD
+                              : koRounds.indexOf(round) === 0 &&
+                                  seedPairs.length > 0
+                                ? // Projected first round from the group standings.
+                                  seedPairs.map((p, i) => (
+                                    <div
+                                      key={i}
+                                      className="overflow-hidden rounded-[10px] border border-dashed border-[#FFB800]/25 bg-[#FFB800]/[0.04]"
+                                    >
+                                      <div className="border-b border-white/[0.05] px-3.5 py-2.5 text-[12px] font-extrabold text-white/70">
+                                        {p.a}
+                                      </div>
+                                      <div className="px-3.5 py-2.5 text-[12px] font-extrabold text-white/70">
+                                        {p.b}
+                                      </div>
                                     </div>
-                                    <div className="px-3.5 py-2.5 text-[12.5px] font-bold text-white/40">
-                                      TBD
+                                  ))
+                                : Array.from({ length: expected }).map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className="overflow-hidden rounded-[10px] border border-dashed border-white/[0.14] bg-black/30"
+                                    >
+                                      <div className="border-b border-white/[0.05] px-3.5 py-2.5 text-[12.5px] font-bold text-white/40">
+                                        TBD
+                                      </div>
+                                      <div className="px-3.5 py-2.5 text-[12.5px] font-bold text-white/40">
+                                        TBD
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))}
                           </div>
                         );
                       })}

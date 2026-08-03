@@ -70,3 +70,10 @@ export class SetScoreDto {
   @Min(0)
   scoreB: number;
 }
+
+/** Shuffle the confirmed participants into a fresh ladder / group draw. */
+export class GenerateDrawDto {
+  @IsString()
+  @MinLength(1)
+  tournamentId: string;
+}

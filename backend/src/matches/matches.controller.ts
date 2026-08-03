@@ -11,7 +11,12 @@ import {
 
 import { Public, Roles } from "../auth/auth.decorators";
 
-import { CreateMatchDto, SetScoreDto, UpdateMatchDto } from "./dto/match.dto";
+import {
+  CreateMatchDto,
+  GenerateDrawDto,
+  SetScoreDto,
+  UpdateMatchDto,
+} from "./dto/match.dto";
 import { MatchesService } from "./matches.service";
 
 @Controller("matches")
@@ -22,6 +27,13 @@ export class MatchesController {
   @Get()
   findAll(@Query("tournamentId") tournamentId?: string) {
     return this.matches.findAll(tournamentId);
+  }
+
+  /** Shuffle confirmed participants into a fresh ladder / group draw. */
+  @Roles("admin")
+  @Post("generate")
+  generate(@Body() dto: GenerateDrawDto) {
+    return this.matches.generateDraw(dto.tournamentId);
   }
 
   @Roles("admin")

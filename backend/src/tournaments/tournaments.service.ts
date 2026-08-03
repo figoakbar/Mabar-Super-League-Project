@@ -11,15 +11,16 @@ import { CreateTournamentDto } from "./dto/create-tournament.dto";
 import { ScheduleItemDto } from "./dto/schedule-item.dto";
 import { UpdateTournamentDto } from "./dto/update-tournament.dto";
 
+type Counts = { participants: number; matches: number };
 type WithCount = Tournament & {
-  _count?: { participants: number };
+  _count?: Counts;
   schedule?: ScheduleItem[];
 };
 type WithRelations = Tournament & {
   participants?: Participant[];
   matches?: Match[];
   schedule?: ScheduleItem[];
-  _count?: { participants: number };
+  _count?: Counts;
 };
 
 /** Schedule rows keep the order the admin arranged them in. */
@@ -41,7 +42,9 @@ export class TournamentsService {
   private serialize(t: WithRelations) {
     const { _count, ...rest } = t;
     const registeredTeams = _count?.participants ?? t.participants?.length ?? 0;
-    return { ...rest, registeredTeams };
+    // matchCount lets the frontend tell a "drawn" tournament from an undrawn one.
+    const matchCount = _count?.matches ?? t.matches?.length ?? 0;
+    return { ...rest, registeredTeams, matchCount };
   }
 
   async findAll() {
@@ -49,7 +52,7 @@ export class TournamentsService {
       orderBy: { createdAt: "desc" },
       include: {
         schedule: { orderBy: { position: "asc" } },
-        _count: { select: { participants: true } },
+        _count: { select: { participants: true, matches: true } },
       },
     });
     return rows.map((r: WithCount) => this.serialize(r));
@@ -62,7 +65,7 @@ export class TournamentsService {
         participants: { orderBy: { createdAt: "asc" } },
         matches: { orderBy: { createdAt: "asc" } },
         schedule: { orderBy: { position: "asc" } },
-        _count: { select: { participants: true } },
+        _count: { select: { participants: true, matches: true } },
       },
     });
     if (!row) throw new NotFoundException(`Tournament ${id} not found`);
@@ -80,7 +83,7 @@ export class TournamentsService {
       },
       include: {
         schedule: { orderBy: { position: "asc" } },
-        _count: { select: { participants: true } },
+        _count: { select: { participants: true, matches: true } },
       },
     });
     return this.serialize(row);
@@ -105,7 +108,7 @@ export class TournamentsService {
       },
       include: {
         schedule: { orderBy: { position: "asc" } },
-        _count: { select: { participants: true } },
+        _count: { select: { participants: true, matches: true } },
       },
     });
     return this.serialize(row);

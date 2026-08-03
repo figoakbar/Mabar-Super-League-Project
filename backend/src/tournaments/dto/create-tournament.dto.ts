@@ -26,7 +26,7 @@ export class CreateTournamentDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(["open", "ongoing", "completed"])
+  @IsIn(["open", "closed", "ongoing", "completed"])
   status?: string;
 
   @IsOptional()
