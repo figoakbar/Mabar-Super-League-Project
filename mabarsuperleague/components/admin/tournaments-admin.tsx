@@ -26,6 +26,7 @@ import { formatDate } from "@/lib/data/tournament-view";
 const empty = {
   name: "",
   game: "",
+  platforms: "",
   status: "open",
   format: "knockout",
   description: "",
@@ -37,6 +38,25 @@ const empty = {
 };
 type FormState = typeof empty;
 
+/** Platforms an admin can tag a tournament with. Stored comma-separated. */
+const PLATFORM_OPTIONS = [
+  "PS5",
+  "PS4",
+  "Xbox Series X|S",
+  "Xbox One",
+  "PC",
+  "Nintendo Switch",
+  "Mobile",
+];
+
+/** Split the stored comma-separated string into a clean list. */
+function parsePlatforms(value: string): string[] {
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /** One editable schedule row in the form. */
 type ScheduleRow = { label: string; date: string; time: string };
 const emptyRow: ScheduleRow = { label: "", date: "", time: "" };
@@ -45,6 +65,7 @@ function toForm(t: Tournament): FormState {
   return {
     name: t.name,
     game: t.game,
+    platforms: t.platforms,
     status: t.status,
     format: t.format,
     description: t.description,
@@ -152,6 +173,19 @@ export function TournamentsAdmin() {
   const set = (k: keyof FormState) => (v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  /** Add/remove a platform, keeping the display order of PLATFORM_OPTIONS. */
+  const togglePlatform = (p: string) =>
+    setForm((f) => {
+      const current = parsePlatforms(f.platforms);
+      const next = current.includes(p)
+        ? current.filter((x) => x !== p)
+        : [...current, p];
+      // Known options first (in list order), then any custom values preserved.
+      const known = PLATFORM_OPTIONS.filter((o) => next.includes(o));
+      const custom = next.filter((x) => !PLATFORM_OPTIONS.includes(x));
+      return { ...f, platforms: [...known, ...custom].join(", ") };
+    });
+
   const setRow = (i: number, k: keyof ScheduleRow, v: string) =>
     setSchedule((rows) =>
       rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)),
@@ -167,6 +201,7 @@ export function TournamentsAdmin() {
     const payload = {
       name: form.name.trim(),
       game: form.game.trim(),
+      platforms: parsePlatforms(form.platforms).join(", "),
       status: form.status as Tournament["status"],
       format: form.format as TournamentFormat,
       description: form.description,
@@ -524,6 +559,40 @@ export function TournamentsAdmin() {
                 onChange={(e) => set("registrationDeadline")(e.target.value)}
               />
             </div>
+
+            {/* Supported platforms — multi-select, stored comma-separated */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] font-extrabold tracking-[1px] text-white/45">
+                PLATFORMS
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORM_OPTIONS.map((p) => {
+                  const on = parsePlatforms(form.platforms).includes(p);
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => togglePlatform(p)}
+                      aria-pressed={on}
+                      className="cursor-pointer rounded-lg border px-3 py-1.5 text-[12.5px] font-bold transition-colors"
+                      style={{
+                        background: on ? "rgba(255,184,0,0.12)" : "transparent",
+                        borderColor: on
+                          ? "rgba(255,184,0,0.5)"
+                          : "rgba(255,255,255,0.14)",
+                        color: on ? "#FFB800" : "rgba(255,255,255,0.6)",
+                      }}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[11.5px] font-semibold text-white/35">
+                Which consoles / PC the game runs on (e.g. PS5, Xbox, PC).
+              </span>
+            </div>
+
             <TextArea
               label="DESCRIPTION"
               value={form.description}

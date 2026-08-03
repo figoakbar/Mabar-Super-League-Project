@@ -62,6 +62,8 @@ model Tournament {
   id                   String   @id @default(cuid())
   name                 String
   game                 String
+  // Comma-separated list of supported platforms, e.g. "PS5, Xbox Series X|S, PC".
+  platforms            String   @default("")
   description          String   @default("")
   status               String   @default("open") // open | ongoing | completed
   // knockout | group_knockout | racing — drives how the bracket is displayed

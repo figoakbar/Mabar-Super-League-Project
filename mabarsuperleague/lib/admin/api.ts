@@ -79,6 +79,8 @@ export type Tournament = {
   id: string;
   name: string;
   game: string;
+  /** Comma-separated supported platforms, e.g. "PS5, Xbox Series X|S, PC". */
+  platforms: string;
   description: string;
   status: TournamentStatus;
   format: TournamentFormat;

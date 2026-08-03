@@ -293,6 +293,25 @@ export function TournamentLive({
                   ? `Single elimination — ${koRounds[0]} to Final`
                   : "Group stage · Top 2 advance to knockout"}
             </span>
+            {t.platforms?.trim() && (
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10.5px] font-extrabold tracking-[1px] text-white/35">
+                  PLATFORMS
+                </span>
+                {t.platforms
+                  .split(",")
+                  .map((p) => p.trim())
+                  .filter(Boolean)
+                  .map((p) => (
+                    <span
+                      key={p}
+                      className="rounded-md border border-white/[0.14] bg-white/[0.04] px-2 py-0.5 text-[11px] font-bold text-white/70"
+                    >
+                      {p}
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
 
           <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

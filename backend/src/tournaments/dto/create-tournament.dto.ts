@@ -21,6 +21,11 @@ export class CreateTournamentDto {
   @MinLength(1)
   game: string;
 
+  /** Comma-separated supported platforms, e.g. "PS5, Xbox Series X|S, PC". */
+  @IsOptional()
+  @IsString()
+  platforms?: string;
+
   @IsOptional()
   @IsString()
   description?: string;

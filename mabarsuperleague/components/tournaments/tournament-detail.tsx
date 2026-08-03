@@ -207,6 +207,7 @@ export function TournamentDetail({
   const formatItems = [
     { label: "FORMAT", value: formatLabel(t.format) },
     { label: "GAME", value: t.game },
+    ...(t.platforms ? [{ label: "PLATFORMS", value: t.platforms }] : []),
     { label: "BRACKET SIZE", value: `${t.maxTeams} players` },
     { label: "ENTRY FEE", value: feeStr },
     { label: "PRIZE POOL", value: prizeStr },
