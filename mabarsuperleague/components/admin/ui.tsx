@@ -82,38 +82,53 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
+const MODAL_WIDTHS = {
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+} as const;
+
 export function Modal({
   title,
   onClose,
   children,
+  size = "lg",
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  size?: keyof typeof MODAL_WIDTHS;
 }) {
   return (
+    // The scroll container and the centering wrapper are split on purpose:
+    // `min-h-full` lets the wrapper grow past the viewport for tall content, so
+    // a form taller than the screen stays fully scrollable — top included —
+    // instead of having its top clipped by `items-center`.
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
-        className="my-8 w-full max-w-lg rounded-2xl border border-white/[0.1] bg-[#101114] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-5 flex items-center justify-between">
-          <h3 className="font-display text-xl font-extrabold text-white">
-            {title}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="cursor-pointer rounded-lg p-1 text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
-          >
-            <X className="size-5" />
-          </button>
+      <div className="flex min-h-full items-start justify-center p-4 sm:items-center">
+        <div
+          className={`my-8 w-full ${MODAL_WIDTHS[size]} rounded-2xl border border-white/[0.1] bg-[#101114] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)]`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-5 flex items-center justify-between">
+            <h3 className="font-display text-xl font-extrabold text-white">
+              {title}
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="cursor-pointer rounded-lg p-1 text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+          {children}
         </div>
-        {children}
       </div>
     </div>
   );

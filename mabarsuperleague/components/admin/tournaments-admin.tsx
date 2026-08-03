@@ -489,6 +489,7 @@ export function TournamentsAdmin() {
         <Modal
           title={editing ? "Edit tournament" : "New tournament"}
           onClose={() => setOpen(false)}
+          size="2xl"
         >
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
