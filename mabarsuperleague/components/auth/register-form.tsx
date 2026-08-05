@@ -1,6 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import {
+  useActionState,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import Link from "next/link";
 
 import { GoogleButton } from "@/components/auth/google-button";
@@ -18,6 +23,101 @@ function Label({ htmlFor, children }: { htmlFor: string; children: string }) {
   );
 }
 
+type Platform = {
+  key: string;
+  label: string;
+  idLabel: string;
+  placeholder: string;
+};
+
+const CONSOLE_PLATFORMS: Platform[] = [
+  { key: "PSN", label: "PlayStation", idLabel: "PSN ID", placeholder: "Your PSN Online ID" },
+  { key: "Xbox", label: "Xbox", idLabel: "Xbox Gamertag", placeholder: "Your Xbox Gamertag" },
+];
+
+const PC_PLATFORMS: Platform[] = [
+  { key: "Steam", label: "Steam", idLabel: "Steam ID", placeholder: "Steam ID or profile URL" },
+  { key: "Epic", label: "Epic", idLabel: "Epic username", placeholder: "Your Epic Games username" },
+  { key: "Riot", label: "Riot", idLabel: "Riot ID", placeholder: "name#TAG" },
+];
+
+/** Join the picked platforms into one stored string, e.g. "PSN: abc · Xbox: xyz". */
+function combineIds(platforms: Platform[], picks: Record<string, string>): string {
+  return platforms
+    .filter((p) => p.key in picks && picks[p.key].trim())
+    .map((p) => `${p.key}: ${picks[p.key].trim()}`)
+    .join(" · ");
+}
+
+/** Complete once at least one platform is picked and every picked one has an id. */
+function deviceComplete(
+  on: boolean,
+  platforms: Platform[],
+  picks: Record<string, string>,
+): boolean {
+  if (!on) return true;
+  const picked = platforms.filter((p) => p.key in picks);
+  return picked.length > 0 && picked.every((p) => picks[p.key].trim().length > 0);
+}
+
+/** Platform chips + an id field for each picked platform. */
+function PlatformPicker({
+  legend,
+  platforms,
+  picks,
+  onToggle,
+  onId,
+}: {
+  legend: string;
+  platforms: Platform[];
+  picks: Record<string, string>;
+  onToggle: (key: string) => void;
+  onId: (key: string, value: string) => void;
+}) {
+  return (
+    <div className="mt-1 flex flex-col gap-2.5 rounded-xl border border-white/[0.07] bg-black/20 p-3">
+      <span className="text-[11px] font-extrabold tracking-[0.6px] text-white/45">
+        {legend}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {platforms.map((p) => {
+          const on = p.key in picks;
+          return (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => onToggle(p.key)}
+              aria-pressed={on}
+              className="cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-bold transition-colors"
+              style={{
+                background: on ? "rgba(255,184,0,0.14)" : "transparent",
+                borderColor: on ? "rgba(255,184,0,0.55)" : "rgba(255,255,255,0.14)",
+                color: on ? "#FFB800" : "rgba(255,255,255,0.6)",
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+      {platforms
+        .filter((p) => p.key in picks)
+        .map((p) => (
+          <div key={p.key} className="flex flex-col gap-1.5">
+            <Label htmlFor={`gid-${p.key}`}>{p.idLabel.toUpperCase()}</Label>
+            <input
+              id={`gid-${p.key}`}
+              value={picks[p.key]}
+              onChange={(e) => onId(p.key, e.target.value)}
+              placeholder={p.placeholder}
+              className={authInputClass}
+            />
+          </div>
+        ))}
+    </div>
+  );
+}
+
 export function RegisterForm() {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     register,
@@ -27,13 +127,39 @@ export function RegisterForm() {
   const [confirm, setConfirm] = useState("");
   const [onConsole, setOnConsole] = useState(false);
   const [onPc, setOnPc] = useState(false);
+  // Keyed by platform; a key present means "picked", its value is the gamer id.
+  const [consolePicks, setConsolePicks] = useState<Record<string, string>>({});
+  const [pcPicks, setPcPicks] = useState<Record<string, string>>({});
   const [agreed, setAgreed] = useState(false);
+
+  const togglePick =
+    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
+    (key: string) =>
+      setter((prev) => {
+        const next = { ...prev };
+        if (key in next) delete next[key];
+        else next[key] = "";
+        return next;
+      });
+  const setPickId =
+    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
+    (key: string, value: string) =>
+      setter((prev) => ({ ...prev, [key]: value }));
 
   const mismatch = confirm.length > 0 && password !== confirm;
   const tooShort = password.length > 0 && password.length < 8;
   const noDevice = !onConsole && !onPc;
+  const consoleComplete = deviceComplete(onConsole, CONSOLE_PLATFORMS, consolePicks);
+  const pcComplete = deviceComplete(onPc, PC_PLATFORMS, pcPicks);
+  const consoleId = onConsole ? combineIds(CONSOLE_PLATFORMS, consolePicks) : "";
+  const pcId = onPc ? combineIds(PC_PLATFORMS, pcPicks) : "";
   const canSubmit =
-    password.length >= 8 && !mismatch && !noDevice && agreed;
+    password.length >= 8 &&
+    !mismatch &&
+    !noDevice &&
+    consoleComplete &&
+    pcComplete &&
+    agreed;
 
   return (
     <form
@@ -122,7 +248,6 @@ export function RegisterForm() {
           <label className="flex cursor-pointer items-center gap-2 text-[13.5px] font-bold text-white/70">
             <input
               type="checkbox"
-              name="deviceConsole"
               checked={onConsole}
               onChange={(e) => setOnConsole(e.target.checked)}
               className="size-[15px] accent-[#FFB800]"
@@ -132,7 +257,6 @@ export function RegisterForm() {
           <label className="flex cursor-pointer items-center gap-2 text-[13.5px] font-bold text-white/70">
             <input
               type="checkbox"
-              name="devicePc"
               checked={onPc}
               onChange={(e) => setOnPc(e.target.checked)}
               className="size-[15px] accent-[#FFB800]"
@@ -148,31 +272,39 @@ export function RegisterForm() {
         )}
 
         {onConsole && (
-          <div className="mt-1 flex flex-col gap-1.5">
-            <Label htmlFor="consoleId">CONSOLE GAMER ID</Label>
-            <input
-              id="consoleId"
-              name="consoleId"
-              placeholder="PSN ID / Xbox Gamertag"
-              required
-              className={authInputClass}
-            />
-          </div>
+          <PlatformPicker
+            legend="CONSOLE — PICK PLAYSTATION AND/OR XBOX"
+            platforms={CONSOLE_PLATFORMS}
+            picks={consolePicks}
+            onToggle={togglePick(setConsolePicks)}
+            onId={setPickId(setConsolePicks)}
+          />
+        )}
+        {onConsole && !consoleComplete && (
+          <p className="text-xs font-bold text-white/35">
+            Pick a console platform and fill in its ID.
+          </p>
         )}
 
         {onPc && (
-          <div className="mt-1 flex flex-col gap-1.5">
-            <Label htmlFor="pcId">PC GAMER ID</Label>
-            <input
-              id="pcId"
-              name="pcId"
-              placeholder="Steam ID / Epic username"
-              required
-              className={authInputClass}
-            />
-          </div>
+          <PlatformPicker
+            legend="PC — PICK STEAM, EPIC AND/OR RIOT"
+            platforms={PC_PLATFORMS}
+            picks={pcPicks}
+            onToggle={togglePick(setPcPicks)}
+            onId={setPickId(setPcPicks)}
+          />
+        )}
+        {onPc && !pcComplete && (
+          <p className="text-xs font-bold text-white/35">
+            Pick a PC platform and fill in its ID.
+          </p>
         )}
       </div>
+
+      {/* Combined values submitted to the register action. */}
+      <input type="hidden" name="consoleId" value={consoleId} />
+      <input type="hidden" name="pcId" value={pcId} />
 
       {/* Optional */}
       <div className="flex flex-col gap-1.5">

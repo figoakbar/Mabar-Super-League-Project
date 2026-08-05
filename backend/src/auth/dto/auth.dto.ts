@@ -36,12 +36,12 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(80)
+  @MaxLength(200)
   consoleId?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(80)
+  @MaxLength(200)
   pcId?: string;
 
   @IsOptional()
@@ -103,12 +103,12 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(80)
+  @MaxLength(200)
   consoleId?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(80)
+  @MaxLength(200)
   pcId?: string;
 
   @IsOptional()
