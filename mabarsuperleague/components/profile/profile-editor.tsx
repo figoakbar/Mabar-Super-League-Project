@@ -1,10 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Check, Trash2 } from "lucide-react";
 
 import { Avatar } from "@/components/shared/user-menu";
+import {
+  CONSOLE_PLATFORMS,
+  combineIds,
+  parseIds,
+  PC_PLATFORMS,
+  PlatformPicker,
+} from "@/components/shared/gamer-platforms";
 import { api, API_ORIGIN } from "@/lib/admin/api";
 import { avatarSrc, formatDate } from "@/lib/data/tournament-view";
 import type { SessionUser } from "@/lib/auth/dal";
@@ -66,10 +73,22 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
   const [form, setForm] = useState({
     username: user.username,
     phone: user.phone,
-    consoleId: user.consoleId,
-    pcId: user.pcId,
     instagram: user.instagram,
   });
+  // Gamer IDs are edited through the platform pickers; any earlier free-text
+  // value that doesn't map to a known platform is preserved in an "other" field.
+  const [consolePicks, setConsolePicks] = useState<Record<string, string>>(
+    () => parseIds(CONSOLE_PLATFORMS, user.consoleId).picks,
+  );
+  const [consoleOther, setConsoleOther] = useState(
+    () => parseIds(CONSOLE_PLATFORMS, user.consoleId).leftover,
+  );
+  const [pcPicks, setPcPicks] = useState<Record<string, string>>(
+    () => parseIds(PC_PLATFORMS, user.pcId).picks,
+  );
+  const [pcOther, setPcOther] = useState(
+    () => parseIds(PC_PLATFORMS, user.pcId).leftover,
+  );
   const [savedAt, setSavedAt] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -82,11 +101,33 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
   const set = (k: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  const togglePick =
+    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
+    (key: string) =>
+      setter((prev) => {
+        const next = { ...prev };
+        if (key in next) delete next[key];
+        else next[key] = "";
+        return next;
+      });
+  const setPickId =
+    (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
+    (key: string, value: string) =>
+      setter((prev) => ({ ...prev, [key]: value }));
+
+  // Combine picks (plus any preserved leftover) back into the stored strings.
+  const consoleId = [combineIds(CONSOLE_PLATFORMS, consolePicks), consoleOther.trim()]
+    .filter(Boolean)
+    .join(" · ");
+  const pcId = [combineIds(PC_PLATFORMS, pcPicks), pcOther.trim()]
+    .filter(Boolean)
+    .join(" · ");
+
   const dirty =
     form.username !== user.username ||
     form.phone !== user.phone ||
-    form.consoleId !== user.consoleId ||
-    form.pcId !== user.pcId ||
+    consoleId !== user.consoleId ||
+    pcId !== user.pcId ||
     form.instagram !== user.instagram;
 
   async function pickAvatar(file: File) {
@@ -124,7 +165,7 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
     setSaving(true);
     setSaveError(null);
     try {
-      await api.updateProfile(form);
+      await api.updateProfile({ ...form, consoleId, pcId });
       setSavedAt(Date.now());
       router.refresh();
     } catch (err) {
@@ -286,25 +327,52 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
               />
             </label>
 
-            <label className="flex flex-col gap-1.5">
-              <span className={labelClass}>CONSOLE GAMER ID</span>
-              <input
-                value={form.consoleId}
-                onChange={(e) => set("consoleId")(e.target.value)}
-                placeholder="PSN ID / Xbox Gamertag"
-                className={inputClass}
-              />
-            </label>
+          </div>
 
-            <label className="flex flex-col gap-1.5">
-              <span className={labelClass}>PC GAMER ID</span>
-              <input
-                value={form.pcId}
-                onChange={(e) => set("pcId")(e.target.value)}
-                placeholder="Steam ID / Epic username"
-                className={inputClass}
-              />
-            </label>
+          <div className="flex flex-col gap-3">
+            <span className={labelClass}>GAMER IDs</span>
+            <PlatformPicker
+              legend="CONSOLE — PLAYSTATION / XBOX"
+              platforms={CONSOLE_PLATFORMS}
+              picks={consolePicks}
+              onToggle={togglePick(setConsolePicks)}
+              onId={setPickId(setConsolePicks)}
+              inputClass={inputClass}
+            />
+            {consoleOther !== "" && (
+              <label className="flex flex-col gap-1.5">
+                <span className={labelClass}>OTHER CONSOLE ID</span>
+                <input
+                  value={consoleOther}
+                  onChange={(e) => setConsoleOther(e.target.value)}
+                  className={inputClass}
+                />
+                <span className="text-[11px] font-semibold text-white/30">
+                  Your earlier value — move it into a platform above, edit, or clear it.
+                </span>
+              </label>
+            )}
+            <PlatformPicker
+              legend="PC — STEAM / EPIC / RIOT"
+              platforms={PC_PLATFORMS}
+              picks={pcPicks}
+              onToggle={togglePick(setPcPicks)}
+              onId={setPickId(setPcPicks)}
+              inputClass={inputClass}
+            />
+            {pcOther !== "" && (
+              <label className="flex flex-col gap-1.5">
+                <span className={labelClass}>OTHER PC ID</span>
+                <input
+                  value={pcOther}
+                  onChange={(e) => setPcOther(e.target.value)}
+                  className={inputClass}
+                />
+                <span className="text-[11px] font-semibold text-white/30">
+                  Your earlier value — move it into a platform above, edit, or clear it.
+                </span>
+              </label>
+            )}
           </div>
 
           {saveError && <Note kind="error">{saveError}</Note>}
@@ -323,15 +391,19 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
             {dirty && (
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
                   setForm({
                     username: user.username,
                     phone: user.phone,
-                    consoleId: user.consoleId,
-                    pcId: user.pcId,
                     instagram: user.instagram,
-                  })
-                }
+                  });
+                  const c = parseIds(CONSOLE_PLATFORMS, user.consoleId);
+                  const p = parseIds(PC_PLATFORMS, user.pcId);
+                  setConsolePicks(c.picks);
+                  setConsoleOther(c.leftover);
+                  setPcPicks(p.picks);
+                  setPcOther(p.leftover);
+                }}
                 className="cursor-pointer text-[13px] font-bold text-white/45 transition-colors hover:text-white"
               >
                 Discard

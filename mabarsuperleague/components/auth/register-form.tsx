@@ -10,6 +10,13 @@ import Link from "next/link";
 
 import { GoogleButton } from "@/components/auth/google-button";
 import { authInputClass, PasswordField } from "@/components/auth/password-field";
+import {
+  CONSOLE_PLATFORMS,
+  combineIds,
+  deviceComplete,
+  PC_PLATFORMS,
+  PlatformPicker,
+} from "@/components/shared/gamer-platforms";
 import { register, type AuthState } from "@/lib/auth/actions";
 
 function Label({ htmlFor, children }: { htmlFor: string; children: string }) {
@@ -20,101 +27,6 @@ function Label({ htmlFor, children }: { htmlFor: string; children: string }) {
     >
       {children}
     </label>
-  );
-}
-
-type Platform = {
-  key: string;
-  label: string;
-  idLabel: string;
-  placeholder: string;
-};
-
-const CONSOLE_PLATFORMS: Platform[] = [
-  { key: "PSN", label: "PlayStation", idLabel: "PSN ID", placeholder: "Your PSN Online ID" },
-  { key: "Xbox", label: "Xbox", idLabel: "Xbox Gamertag", placeholder: "Your Xbox Gamertag" },
-];
-
-const PC_PLATFORMS: Platform[] = [
-  { key: "Steam", label: "Steam", idLabel: "Steam ID", placeholder: "Steam ID or profile URL" },
-  { key: "Epic", label: "Epic", idLabel: "Epic username", placeholder: "Your Epic Games username" },
-  { key: "Riot", label: "Riot", idLabel: "Riot ID", placeholder: "name#TAG" },
-];
-
-/** Join the picked platforms into one stored string, e.g. "PSN: abc · Xbox: xyz". */
-function combineIds(platforms: Platform[], picks: Record<string, string>): string {
-  return platforms
-    .filter((p) => p.key in picks && picks[p.key].trim())
-    .map((p) => `${p.key}: ${picks[p.key].trim()}`)
-    .join(" · ");
-}
-
-/** Complete once at least one platform is picked and every picked one has an id. */
-function deviceComplete(
-  on: boolean,
-  platforms: Platform[],
-  picks: Record<string, string>,
-): boolean {
-  if (!on) return true;
-  const picked = platforms.filter((p) => p.key in picks);
-  return picked.length > 0 && picked.every((p) => picks[p.key].trim().length > 0);
-}
-
-/** Platform chips + an id field for each picked platform. */
-function PlatformPicker({
-  legend,
-  platforms,
-  picks,
-  onToggle,
-  onId,
-}: {
-  legend: string;
-  platforms: Platform[];
-  picks: Record<string, string>;
-  onToggle: (key: string) => void;
-  onId: (key: string, value: string) => void;
-}) {
-  return (
-    <div className="mt-1 flex flex-col gap-2.5 rounded-xl border border-white/[0.07] bg-black/20 p-3">
-      <span className="text-[11px] font-extrabold tracking-[0.6px] text-white/45">
-        {legend}
-      </span>
-      <div className="flex flex-wrap gap-2">
-        {platforms.map((p) => {
-          const on = p.key in picks;
-          return (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => onToggle(p.key)}
-              aria-pressed={on}
-              className="cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-bold transition-colors"
-              style={{
-                background: on ? "rgba(255,184,0,0.14)" : "transparent",
-                borderColor: on ? "rgba(255,184,0,0.55)" : "rgba(255,255,255,0.14)",
-                color: on ? "#FFB800" : "rgba(255,255,255,0.6)",
-              }}
-            >
-              {p.label}
-            </button>
-          );
-        })}
-      </div>
-      {platforms
-        .filter((p) => p.key in picks)
-        .map((p) => (
-          <div key={p.key} className="flex flex-col gap-1.5">
-            <Label htmlFor={`gid-${p.key}`}>{p.idLabel.toUpperCase()}</Label>
-            <input
-              id={`gid-${p.key}`}
-              value={picks[p.key]}
-              onChange={(e) => onId(p.key, e.target.value)}
-              placeholder={p.placeholder}
-              className={authInputClass}
-            />
-          </div>
-        ))}
-    </div>
   );
 }
 
@@ -278,6 +190,7 @@ export function RegisterForm() {
             picks={consolePicks}
             onToggle={togglePick(setConsolePicks)}
             onId={setPickId(setConsolePicks)}
+            inputClass={authInputClass}
           />
         )}
         {onConsole && !consoleComplete && (
@@ -293,6 +206,7 @@ export function RegisterForm() {
             picks={pcPicks}
             onToggle={togglePick(setPcPicks)}
             onId={setPickId(setPcPicks)}
+            inputClass={authInputClass}
           />
         )}
         {onPc && !pcComplete && (
