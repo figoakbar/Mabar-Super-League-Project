@@ -28,12 +28,19 @@ export default async function LoginPage({
   const { next, reset, error } = await searchParams;
 
   return (
-    <main className="relative h-screen min-h-[720px] overflow-hidden bg-[#0C0C10] font-nunito">
-      {/* Grid latar */}
+    <main className="relative min-h-screen overflow-x-hidden bg-[#0C0C10] font-nunito">
+      {/* Dekorasi latar — fixed & ter-clip ke viewport, jadi tak pernah menambah
+          scroll atau memotong form ketika kontennya lebih tinggi dari layar
+          (mis. saat pesan error muncul). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_90%_80%_at_50%_40%,black_40%,transparent_100%)]"
-      />
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
+        {/* Grid latar */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_90%_80%_at_50%_40%,black_40%,transparent_100%)]"
+        />
 
       {/* Ornamen mengambang */}
       <div
@@ -48,6 +55,7 @@ export default async function LoginPage({
         aria-hidden
         className="absolute right-[16%] top-[48%] size-3 rounded-full bg-[#FF8A80] opacity-45 [animation:float_3.4s_ease-in-out_infinite] [animation-delay:2s]"
       />
+      </div>
 
       {/* Bar atas */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-[22px] sm:px-10">
@@ -68,7 +76,7 @@ export default async function LoginPage({
       </div>
 
       {/* Konten utama */}
-      <div className="relative z-10 flex flex-col items-center gap-4 px-4 pt-[86px]">
+      <div className="relative z-10 flex flex-col items-center gap-4 px-4 pb-16 pt-[86px]">
         <div className="flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] px-4 py-[7px] text-[13px]">
           <span className="font-extrabold text-[#FFB800]">★</span>
           <span className="font-extrabold text-white">New Season</span>
@@ -95,7 +103,11 @@ export default async function LoginPage({
         />
       </div>
 
-      {/* Kipas kartu karakter */}
+      {/* Kipas kartu + gradasi — backdrop bawah, fixed & ter-clip ke viewport. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
       <div className="absolute bottom-[-130px] left-1/2 z-[5] h-[430px] w-[1240px] -translate-x-1/2 scale-[0.55] max-lg:origin-bottom sm:scale-75 lg:scale-100">
         {/* 1. Sepak Bola — ungu */}
         <div className="absolute bottom-0 left-0 z-[1] h-[360px] w-[300px] origin-bottom -rotate-[16deg] rounded-[26px] bg-gradient-to-br from-[#8E7BFF] to-[#5B3FD4] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
@@ -258,6 +270,7 @@ export default async function LoginPage({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[90px] bg-gradient-to-b from-transparent to-[#060609]/90"
       />
+      </div>
     </main>
   );
 }

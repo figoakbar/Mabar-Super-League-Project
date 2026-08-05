@@ -12,7 +12,7 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0C0C10] font-nunito">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#0C0C10] font-nunito">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_90%_80%_at_50%_40%,black_40%,transparent_100%)]"
