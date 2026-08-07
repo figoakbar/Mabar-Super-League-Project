@@ -433,7 +433,7 @@ export function PlayersBrowser({
                     )}
                   </div>
                   <span className="truncate text-xs font-bold text-white/40">
-                    {p.mainGame ? `${p.mainGame} · ` : ""}
+                    {p.tournaments.length > 0 ? `${p.tournaments.length} Tournaments Joined | ` : "No Tournaments Joined "}
                     {played > 0 ? `${p.wins}W · ${p.losses}L` : "New player"}
                   </span>
                 </div>
