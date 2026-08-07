@@ -84,6 +84,12 @@ const STATUS = {
     statusColor: "#FFB800",
     note: "Payment proof under review — slot confirmed after verification.",
   },
+  ongoing: {
+    status: "Ongoing",
+    statusBg: "rgba(224,96,85,0.14)",
+    statusColor: "#E06055",
+    note: "This tournament is live — check the bracket for your matches.",
+  },
   completed: {
     status: "Completed",
     statusBg: "rgba(199,206,220,0.1)",
@@ -94,12 +100,17 @@ const STATUS = {
 
 function toEntry(r: Participant): TournamentEntry {
   const game = r.tournament?.game ?? "Tournament";
-  const done = r.tournament?.status === "completed";
-  const style = done
-    ? STATUS.completed
-    : r.status === "confirmed"
-      ? STATUS.joined
-      : STATUS.pending;
+  const tStatus = r.tournament?.status;
+  // A confirmed player sees "Ongoing" once the tournament is live, "Joined"
+  // while it's still before kickoff; pending stays pending; finished shows done.
+  const style =
+    tStatus === "completed"
+      ? STATUS.completed
+      : r.status !== "confirmed"
+        ? STATUS.pending
+        : tStatus === "ongoing"
+          ? STATUS.ongoing
+          : STATUS.joined;
   return {
     tid: r.tournamentId,
     tag: game.slice(0, 2).toUpperCase(),
