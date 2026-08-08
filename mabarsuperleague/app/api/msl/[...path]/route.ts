@@ -18,6 +18,7 @@ const ALLOWED = [
   /^race-results(\/|$)/,
   /^users(\/|$)/,
   /^reports(\/|$)/,
+  /^leaderboard(\/|$)/,
   // Self-service profile edits only. Login, register and the password-reset
   // endpoints stay off-limits here — those go through server actions, which
   // also own the session cookie.

@@ -68,6 +68,8 @@ model Tournament {
   status               String   @default("open") // open | ongoing | completed
   // knockout | group_knockout | racing — drives how the bracket is displayed
   format               String   @default("knockout")
+  // minor | major | championship — weights the season points a result awards
+  tier                 String   @default("minor")
   prizePool            Int      @default(0)
   entryFee             Int      @default(0)
   maxTeams             Int      @default(16)

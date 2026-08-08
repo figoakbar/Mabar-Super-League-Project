@@ -60,6 +60,7 @@ export default async function HomePage() {
       .filter(
         (m) =>
           m.status === "completed" &&
+          m.tournament?.tier !== "exhibition" &&
           m.scoreA != null &&
           m.scoreB != null &&
           (m.teamA === username || m.teamB === username),

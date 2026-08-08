@@ -8,8 +8,10 @@ import {
   FORMAT_OPTIONS,
   formatLabel,
   type ScheduleInput,
+  TIER_OPTIONS,
   type Tournament,
   type TournamentFormat,
+  type TournamentTier,
 } from "@/lib/admin/api";
 import {
   btn,
@@ -29,6 +31,7 @@ const empty = {
   platforms: "",
   status: "open",
   format: "knockout",
+  tier: "minor",
   description: "",
   prizePool: "0",
   entryFee: "0",
@@ -68,6 +71,7 @@ function toForm(t: Tournament): FormState {
     platforms: t.platforms,
     status: t.status,
     format: t.format,
+    tier: t.tier,
     description: t.description,
     prizePool: String(t.prizePool),
     entryFee: String(t.entryFee),
@@ -204,6 +208,7 @@ export function TournamentsAdmin() {
       platforms: parsePlatforms(form.platforms).join(", "),
       status: form.status as Tournament["status"],
       format: form.format as TournamentFormat,
+      tier: form.tier as TournamentTier,
       description: form.description,
       prizePool: Number(form.prizePool) || 0,
       entryFee: Number(form.entryFee) || 0,
@@ -521,6 +526,17 @@ export function TournamentsAdmin() {
                 onChange={(e) => set("format")(e.target.value)}
               >
                 {FORMAT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label="TIER (SEASON POINTS)"
+                value={form.tier}
+                onChange={(e) => set("tier")(e.target.value)}
+              >
+                {TIER_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>

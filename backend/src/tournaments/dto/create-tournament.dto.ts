@@ -39,6 +39,10 @@ export class CreateTournamentDto {
   format?: string;
 
   @IsOptional()
+  @IsIn(["minor", "major", "championship", "exhibition"])
+  tier?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   prizePool?: number;

@@ -98,7 +98,7 @@ export class MatchesService {
     return this.prisma.match.findMany({
       where: tournamentId ? { tournamentId } : undefined,
       orderBy: { createdAt: "asc" },
-      include: { tournament: { select: { id: true, name: true } } },
+      include: { tournament: { select: { id: true, name: true, tier: true } } },
     });
   }
 

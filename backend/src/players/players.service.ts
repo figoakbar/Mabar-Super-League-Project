@@ -87,7 +87,7 @@ export class PlayersService {
           scoreB: true,
           round: true,
           tournament: {
-            select: { id: true, name: true, game: true, startDate: true, status: true },
+            select: { id: true, name: true, game: true, startDate: true, status: true, tier: true },
           },
         },
       }),
@@ -96,7 +96,7 @@ export class PlayersService {
         select: {
           team: true,
           tournament: {
-            select: { id: true, name: true, game: true, startDate: true, status: true },
+            select: { id: true, name: true, game: true, startDate: true, status: true, tier: true },
           },
         },
       }),
@@ -143,13 +143,14 @@ export class PlayersService {
     // Registrations decide which tournaments show in someone's history.
     for (const p of participants) {
       const a = agg.get(p.team);
-      if (!a) continue;
+      if (!a || p.tournament.tier === "exhibition") continue;
       ensureTournament(a, p.tournament);
     }
 
     // Completed matches supply wins / losses and per-tournament results.
     for (const m of matches) {
       const t = m.tournament;
+      if (t.tier === "exhibition") continue;
       const sides: [string, number, number][] = [
         [m.teamA, m.scoreA as number, m.scoreB as number],
         [m.teamB, m.scoreB as number, m.scoreA as number],

@@ -42,6 +42,19 @@ export const FORMAT_OPTIONS: { value: TournamentFormat; label: string }[] = [
 export const formatLabel = (f: string) =>
   FORMAT_OPTIONS.find((o) => o.value === f)?.label ?? f;
 
+/** Tournament tier — weights the season points a result awards. */
+export type TournamentTier = "minor" | "major" | "championship" | "exhibition";
+
+export const TIER_OPTIONS: { value: TournamentTier; label: string }[] = [
+  { value: "minor", label: "Minor (×1)" },
+  { value: "major", label: "Major (×2)" },
+  { value: "championship", label: "Championship (×3)" },
+  { value: "exhibition", label: "Exhibition (no points)" },
+];
+
+export const tierLabel = (t: string) =>
+  TIER_OPTIONS.find((o) => o.value === t)?.label ?? t;
+
 export const RACE_SESSIONS = ["practice", "qualifying", "race"] as const;
 export type RaceSession = (typeof RACE_SESSIONS)[number];
 
@@ -84,6 +97,8 @@ export type Tournament = {
   description: string;
   status: TournamentStatus;
   format: TournamentFormat;
+  /** Season-points weight: minor ×1 · major ×2 · championship ×3. */
+  tier: TournamentTier;
   prizePool: number;
   entryFee: number;
   maxTeams: number;
@@ -126,7 +141,7 @@ export type Match = {
   playedAt: string;
   tournamentId: string;
   createdAt: string;
-  tournament?: { id: string; name: string };
+  tournament?: { id: string; name: string; tier?: TournamentTier };
 };
 
 export type TournamentDetail = Tournament & {
@@ -150,6 +165,23 @@ export type PublicPlayer = {
   records: { game: string; w: number; l: number }[];
   championships: string[];
   tournaments: { name: string; game: string; date: string; result: string }[];
+};
+
+/** One ranked row on the seasonal leaderboard. */
+export type LeaderboardEntry = {
+  username: string;
+  avatarUrl: string;
+  points: number;
+  wins: number;
+  losses: number;
+  mainGame: string;
+  tournaments: number;
+};
+
+export type LeaderboardData = {
+  season: string;
+  seasons: string[];
+  players: LeaderboardEntry[];
 };
 
 /** Body accepted when creating or updating a tournament. */
@@ -290,6 +322,12 @@ export const api = {
 
   // Public player directory (stats derived from real matches)
   listPlayers: () => request<PublicPlayer[]>("/players"),
+
+  // Seasonal leaderboard (ranked by season points)
+  leaderboard: (season?: string) =>
+    request<LeaderboardData>(
+      `/leaderboard${season ? `?season=${encodeURIComponent(season)}` : ""}`,
+    ),
 
   // Tournaments
   listTournaments: () => request<Tournament[]>("/tournaments"),
