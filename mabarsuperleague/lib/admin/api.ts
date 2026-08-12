@@ -107,6 +107,10 @@ export type Tournament = {
   registeredTeams: number;
   /** How many matches exist — 0 means the draw hasn't been made yet. */
   matchCount: number;
+  /** Season points each placement earns here (0 for exhibitions). */
+  seasonPoints: { champion: number; runnerUp: number; semifinal: number };
+  /** The season this tournament counts toward (null when unassigned). */
+  season: { id: string; name: string } | null;
   schedule: ScheduleItem[];
   createdAt: string;
   updatedAt: string;
@@ -162,7 +166,7 @@ export type PublicPlayer = {
   winRate: number;
   trophies: number;
   mainGame: string;
-  records: { game: string; w: number; l: number }[];
+  records: { game: string; w: number; l: number; points: number }[];
   championships: string[];
   tournaments: { name: string; game: string; date: string; result: string }[];
 };
@@ -178,15 +182,47 @@ export type LeaderboardEntry = {
   tournaments: number;
 };
 
+export type SeasonStatus = "upcoming" | "active" | "closed";
+
+/** Lightweight season descriptor the leaderboard uses to label/switch seasons. */
+export type SeasonMeta = { id: string; name: string; status: SeasonStatus };
+
+/** A frozen Hall-of-Fame entry: game "" is the overall champion. */
+export type SeasonChampion = {
+  id: string;
+  game: string;
+  username: string;
+  points: number;
+};
+
+/** A full season record (admin view), with its champions and tournament count. */
+export type Season = {
+  id: string;
+  name: string;
+  status: SeasonStatus;
+  startedAt: string;
+  endedAt: string | null;
+  champions: SeasonChampion[];
+  _count: { tournaments: number };
+};
+
 export type LeaderboardData = {
+  /** The selected season's id, or "" when no season exists yet. */
   season: string;
-  seasons: string[];
+  seasonName: string;
+  seasons: SeasonMeta[];
+  /** The game the standings are filtered to, or "" for all games combined. */
+  game: string;
+  /** Games that have season points in the selected season. */
+  games: string[];
   players: LeaderboardEntry[];
 };
 
 /** Body accepted when creating or updating a tournament. */
-export type TournamentInput = Partial<Omit<Tournament, "schedule">> & {
+export type TournamentInput = Partial<Omit<Tournament, "schedule" | "season">> & {
   schedule?: ScheduleInput[];
+  /** Assign to a season (defaults to the active one; null to unassign). */
+  seasonId?: string | null;
 };
 
 /** One month of league activity, grouped by tournament start month. */
@@ -323,11 +359,40 @@ export const api = {
   // Public player directory (stats derived from real matches)
   listPlayers: () => request<PublicPlayer[]>("/players"),
 
-  // Seasonal leaderboard (ranked by season points)
-  leaderboard: (season?: string) =>
-    request<LeaderboardData>(
-      `/leaderboard${season ? `?season=${encodeURIComponent(season)}` : ""}`,
-    ),
+  // Seasonal leaderboard (ranked by season points), optionally per game
+  leaderboard: (season?: string, game?: string) => {
+    const qs = new URLSearchParams();
+    if (season) qs.set("season", season);
+    if (game) qs.set("game", game);
+    const q = qs.toString();
+    return request<LeaderboardData>(`/leaderboard${q ? `?${q}` : ""}`);
+  },
+
+  // Seasons (public list; schedule/close/edit are admin-only)
+  listSeasons: () => request<Season[]>("/seasons"),
+  /** Create/schedule a season. Omit dates to start today, open-ended. */
+  scheduleSeason: (input: {
+    name?: string;
+    startAt?: string;
+    endAt?: string;
+  }) =>
+    request<Season>("/seasons", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  closeSeason: (id: string) =>
+    request<Season>(`/seasons/${id}/close`, { method: "POST" }),
+  recomputeSeasonChampions: (id: string) =>
+    request<Season>(`/seasons/${id}/champions`, { method: "POST" }),
+  /** Edit a season's name and/or window (endAt null clears it → open-ended). */
+  updateSeason: (
+    id: string,
+    input: { name?: string; startAt?: string; endAt?: string | null },
+  ) =>
+    request<Season>(`/seasons/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
 
   // Tournaments
   listTournaments: () => request<Tournament[]>("/tournaments"),

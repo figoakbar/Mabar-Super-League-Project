@@ -19,6 +19,7 @@ const ALLOWED = [
   /^users(\/|$)/,
   /^reports(\/|$)/,
   /^leaderboard(\/|$)/,
+  /^seasons(\/|$)/,
   // Self-service profile edits only. Login, register and the password-reset
   // endpoints stay off-limits here — those go through server actions, which
   // also own the session cookie.

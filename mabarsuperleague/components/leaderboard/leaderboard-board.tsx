@@ -7,6 +7,7 @@ import {
   API_ORIGIN,
   type LeaderboardData,
   type LeaderboardEntry,
+  type Season,
 } from "@/lib/admin/api";
 import { avatarBg, avatarSrc, initialsOf } from "@/lib/data/tournament-view";
 
@@ -68,18 +69,31 @@ function LbAvatar({
 
 export function LeaderboardBoard({ username }: { username: string }) {
   const [season, setSeason] = useState<string | undefined>(undefined);
+  // "" means the overall ranking across every game.
+  const [game, setGame] = useState<string>("");
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  // Full season records (with frozen champions) — fetched once for the Hall of
+  // Fame strip shown on closed seasons.
+  const [seasonRecords, setSeasonRecords] = useState<Season[]>([]);
 
   useEffect(() => {
     let active = true;
     api
-      .leaderboard(season)
+      .leaderboard(season, game)
       .then((d) => {
         if (active) setData(d);
       })
       .catch(() => {
-        if (active) setData({ season: season ?? "", seasons: [], players: [] });
+        if (active)
+          setData({
+            season: season ?? "",
+            seasonName: "",
+            seasons: [],
+            game: "",
+            games: [],
+            players: [],
+          });
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -87,11 +101,38 @@ export function LeaderboardBoard({ username }: { username: string }) {
     return () => {
       active = false;
     };
-  }, [season]);
+  }, [season, game]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .listSeasons()
+      .then((s) => {
+        if (active) setSeasonRecords(s);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const players = (data?.players ?? []).map((p, i) => ({ ...p, rank: i + 1 }));
   const seasons = data?.seasons ?? [];
+  // Upcoming seasons have no standings yet — keep them out of the public switcher.
+  const switchableSeasons = seasons.filter((s) => s.status !== "upcoming");
+  const games = data?.games ?? [];
   const activeSeason = data?.season ?? season ?? "";
+  // The server resolves the effective game (falls back to overall when the
+  // selected game has no data in this season), so highlight from that.
+  const activeGame = data?.game ?? "";
+  // Frozen champions of the selected season, only shown once it is closed.
+  const selectedRecord = seasonRecords.find((s) => s.id === activeSeason);
+  const hallOfFame =
+    selectedRecord && selectedRecord.status === "closed"
+      ? selectedRecord.champions
+      : [];
+  const overallChampion = hallOfFame.find((c) => c.game === "");
+  const gameChampions = hallOfFame.filter((c) => c.game !== "");
   const hasPodium = players.length >= 3;
   const podium = hasPodium ? [players[1], players[0], players[2]] : [];
   const rows = hasPodium ? players.slice(3) : players;
@@ -113,35 +154,111 @@ export function LeaderboardBoard({ username }: { username: string }) {
                 Season <span className="text-[#FFB800]">Leaderboard</span>
               </h1>
               <span className="text-sm font-semibold text-white/50">
-                Ranked by season points across all games · points reset each
-                season
+                {activeGame
+                  ? `Ranked by season points in ${activeGame}`
+                  : "Ranked by season points across all games"}{" "}
+                · points reset each season
               </span>
             </div>
-            {seasons.length > 0 && (
+            {switchableSeasons.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {seasons.map((s) => {
-                  const active = s === activeSeason;
+                {switchableSeasons.map((s) => {
+                  const active = s.id === activeSeason;
                   return (
                     <button
-                      key={s}
+                      key={s.id}
                       type="button"
                       onClick={() => {
                         setLoading(true);
-                        setSeason(s);
+                        setSeason(s.id);
                       }}
-                      className={`cursor-pointer rounded-full border px-4 py-2 text-[12.5px] font-extrabold transition-colors ${
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-4 py-2 text-[12.5px] font-extrabold transition-colors ${
                         active
                           ? "border-[#FFB800] bg-[#FFB800] text-[#0A0B0D]"
                           : "border-white/[0.14] bg-transparent text-white/55 hover:text-white"
                       }`}
                     >
-                      Season {s}
+                      {s.name}
+                      {s.status === "active" && (
+                        <span
+                          className={`rounded-full px-1.5 text-[9px] font-extrabold leading-[15px] tracking-[0.5px] ${
+                            active
+                              ? "bg-[#0A0B0D]/15 text-[#0A0B0D]"
+                              : "bg-[#6FCF97]/15 text-[#6FCF97]"
+                          }`}
+                        >
+                          ACTIVE
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             )}
           </div>
+
+          {/* Game filter — split the ranking per game, or view all combined */}
+          {games.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-[11px] font-extrabold uppercase tracking-[1px] text-white/35">
+                Game
+              </span>
+              {["", ...games].map((g) => {
+                const active = activeGame === g;
+                return (
+                  <button
+                    key={g || "all"}
+                    type="button"
+                    onClick={() => {
+                      setLoading(true);
+                      setGame(g);
+                    }}
+                    className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold transition-colors ${
+                      active
+                        ? "border-white/70 bg-white/[0.14] text-white"
+                        : "border-white/[0.14] bg-transparent text-white/50 hover:text-white"
+                    }`}
+                  >
+                    {g || "All games"}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Hall of Fame — frozen champions of a closed season */}
+          {overallChampion && (
+            <div className="flex flex-col gap-3 rounded-xl border border-[#FFB800]/25 bg-[#FFB800]/[0.05] px-5 py-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px]">🏆</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-[1px] text-[#FFB800]">
+                  Season champions
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-lg border border-[#FFB800]/40 bg-[#FFB800]/[0.12] px-3 py-1.5 text-[12.5px] font-extrabold text-white">
+                  Overall ·{" "}
+                  <span className="text-[#FFB800]">
+                    {overallChampion.username}
+                  </span>{" "}
+                  <span className="text-white/45">
+                    {overallChampion.points.toLocaleString("en-US")} pts
+                  </span>
+                </span>
+                {gameChampions.map((c) => (
+                  <span
+                    key={c.id}
+                    className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-bold text-white/70"
+                  >
+                    {c.game} ·{" "}
+                    <span className="font-extrabold text-white">
+                      {c.username}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Top 3 — mobile list */}
           {hasPodium && (
@@ -230,7 +347,8 @@ export function LeaderboardBoard({ username }: { username: string }) {
         ) : players.length === 0 ? (
           <div className="rounded-xl border border-dashed border-white/[0.14] bg-[#101114] px-5 py-14 text-center text-sm font-semibold text-white/40">
             No season points yet
-            {activeSeason ? ` for Season ${activeSeason}` : ""} — they appear
+            {activeGame ? ` in ${activeGame}` : ""}
+            {data?.seasonName ? ` for ${data.seasonName}` : ""} — they appear
             once tournaments are completed.
           </div>
         ) : (

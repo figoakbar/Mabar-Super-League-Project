@@ -10,12 +10,14 @@ import {
   UserCog,
   ClipboardCheck,
   ChartColumn,
+  CalendarRange,
   ArrowLeft,
 } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/tournaments", label: "Tournaments", icon: Trophy },
+  { href: "/admin/seasons", label: "Seasons", icon: CalendarRange },
   {
     href: "/admin/registrations",
     label: "Registrations",

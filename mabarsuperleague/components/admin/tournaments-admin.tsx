@@ -8,6 +8,7 @@ import {
   FORMAT_OPTIONS,
   formatLabel,
   type ScheduleInput,
+  type Season,
   TIER_OPTIONS,
   type Tournament,
   type TournamentFormat,
@@ -38,6 +39,9 @@ const empty = {
   maxTeams: "16",
   startDate: "",
   registrationDeadline: "",
+  // "" = the active season (chosen automatically on create). Only editable when
+  // reassigning an existing tournament.
+  seasonId: "",
 };
 type FormState = typeof empty;
 
@@ -78,6 +82,7 @@ function toForm(t: Tournament): FormState {
     maxTeams: String(t.maxTeams),
     startDate: t.startDate,
     registrationDeadline: t.registrationDeadline,
+    seasonId: t.season?.id ?? "",
   };
 }
 
@@ -128,6 +133,8 @@ export function TournamentsAdmin() {
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Seasons, for the reassignment dropdown and the "joins active season" hint.
+  const [seasons, setSeasons] = useState<Season[]>([]);
 
   async function load() {
     setLoading(true);
@@ -153,10 +160,18 @@ export function TournamentsAdmin() {
         if (active) setLoading(false);
       }
     })();
+    api
+      .listSeasons()
+      .then((s) => {
+        if (active) setSeasons(s);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, []);
+
+  const activeSeason = seasons.find((s) => s.status === "active");
 
   function openCreate() {
     setEditing(null);
@@ -226,7 +241,13 @@ export function TournamentsAdmin() {
         })),
     };
     try {
-      if (editing) await api.updateTournament(editing.id, payload);
+      if (editing)
+        // Only reassign the season when editing; new tournaments auto-join the
+        // active season on the backend.
+        await api.updateTournament(editing.id, {
+          ...payload,
+          seasonId: form.seasonId || null,
+        });
       else await api.createTournament(payload);
       setOpen(false);
       await load();
@@ -542,6 +563,28 @@ export function TournamentsAdmin() {
                   </option>
                 ))}
               </Select>
+              {editing ? (
+                <Select
+                  label="SEASON"
+                  value={form.seasonId}
+                  onChange={(e) => set("seasonId")(e.target.value)}
+                >
+                  <option value="">— Unassigned —</option>
+                  {seasons.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.status === "active" ? `${s.name} (active)` : s.name}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Select label="SEASON" value="" disabled onChange={() => {}}>
+                  <option value="">
+                    {activeSeason
+                      ? `Joins ${activeSeason.name}`
+                      : "No active season"}
+                  </option>
+                </Select>
+              )}
               <Field
                 label="PRIZE POOL (Rp)"
                 type="number"

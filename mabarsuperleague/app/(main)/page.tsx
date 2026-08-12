@@ -37,7 +37,7 @@ export default async function HomePage() {
   let wins = 0;
   let losses = 0;
   let trophies = 0;
-  let records: { game: string; w: number; l: number }[] = [];
+  let records: { game: string; w: number; l: number; points: number }[] = [];
   const gameCounts: Record<string, number> = {};
   let history: MatchRow[] = [];
   try {
@@ -174,6 +174,14 @@ export default async function HomePage() {
                       <span className="text-[#6FCF97]">{r.w}W</span>
                       <span className="text-white/25"> · </span>
                       <span className="text-[#E07A72]">{r.l}L</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-base font-extrabold text-[#FFB800]">
+                        {r.points.toLocaleString("en-US")}
+                      </span>
+                      <span className="text-[10px] font-extrabold tracking-[0.5px] text-white/40">
+                        PTS
+                      </span>
                     </div>
                     <span className="text-[12px] font-semibold text-white/40">
                       {count} tournament{count === 1 ? "" : "s"}

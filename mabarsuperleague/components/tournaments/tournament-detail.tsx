@@ -7,6 +7,7 @@ import {
   api,
   formatLabel,
   type Participant,
+  tierLabel,
   type TournamentDetail as TournamentDetailData,
 } from "@/lib/admin/api";
 import {
@@ -397,6 +398,71 @@ export function TournamentDetail({
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Season points */}
+          <div className="flex flex-col gap-4 rounded-xl border border-white/[0.08] bg-[#101114] px-[26px] py-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-xl font-extrabold text-white">
+                Season Points
+              </h2>
+              <span
+                className="rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.5px]"
+                style={
+                  t.tier === "exhibition"
+                    ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }
+                    : { background: "rgba(255,184,0,0.12)", color: "#FFB800" }
+                }
+              >
+                {tierLabel(t.tier)}
+              </span>
+            </div>
+
+            {t.tier === "exhibition" ? (
+              <p className="text-[13.5px] font-semibold text-white/45">
+                Exhibition match — this tournament doesn&apos;t award season
+                points or affect records.
+              </p>
+            ) : t.format === "racing" ? (
+              <p className="text-[13.5px] font-semibold text-white/45">
+                Season points are awarded by your final standing · points reset
+                each season.
+              </p>
+            ) : (
+              <>
+                <p className="-mt-1 text-[12.5px] font-semibold text-white/40">
+                  What each placement earns toward the seasonal leaderboard ·
+                  points reset each season.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {(
+                    [
+                      ["Champion", t.seasonPoints.champion, "#FFB800"],
+                      ["Runner-up", t.seasonPoints.runnerUp, "#C7CEDC"],
+                      ["Semifinal", t.seasonPoints.semifinal, "#D98E52"],
+                    ] as const
+                  ).map(([label, pts, color]) => (
+                    <div
+                      key={label}
+                      className="flex flex-col gap-0.5 rounded-[10px] border border-white/[0.06] bg-black/30 px-4 py-3.5"
+                    >
+                      <span
+                        className="font-display text-[22px] font-extrabold"
+                        style={{ color }}
+                      >
+                        {pts}
+                        <span className="ml-1 text-[12px] font-bold text-white/40">
+                          pts
+                        </span>
+                      </span>
+                      <span className="text-[11px] font-bold text-white/45">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Registration form */}

@@ -47,6 +47,7 @@ type PlayerView = {
   losses: number;
   trophies: number;
   winRate: number;
+  points: number;
   isYou: boolean;
   records: PlayerRecord[];
   badges: (Chip & { label: string })[];
@@ -67,6 +68,8 @@ function toView(p: PublicPlayer, isYou: boolean): PlayerView {
   });
 
   const played = p.wins + p.losses;
+  // Career season points across every game the player has completed.
+  const points = p.records.reduce((sum, r) => sum + r.points, 0);
   const badges =
     p.championships.length > 0
       ? p.championships.map((n) => ({
@@ -97,6 +100,7 @@ function toView(p: PublicPlayer, isYou: boolean): PlayerView {
     losses: p.losses,
     trophies: p.trophies,
     winRate: p.winRate,
+    points,
     isYou,
     records,
     badges,
@@ -433,8 +437,10 @@ export function PlayersBrowser({
                     )}
                   </div>
                   <span className="truncate text-xs font-bold text-white/40">
-                    {p.tournaments.length > 0 ? `${p.tournaments.length} Tournaments Joined | ` : "No Tournaments Joined "}
-                    {played > 0 ? `${p.wins}W · ${p.losses}L` : "New player"}
+                    <span className="font-extrabold text-[#FFB800]">
+                      {p.points.toLocaleString("en-US")} pts
+                    </span>
+                    {played > 0 ? ` | ${p.wins}W · ${p.losses}L` : " | New player"}
                   </span>
                 </div>
               </button>

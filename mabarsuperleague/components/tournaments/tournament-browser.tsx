@@ -9,7 +9,12 @@ import {
   type Participant,
   type Tournament,
 } from "@/lib/admin/api";
-import { accentFor, formatDate, rupiah } from "@/lib/data/tournament-view";
+import {
+  formatDate,
+  rupiah,
+  tierAccent,
+  tierShort,
+} from "@/lib/data/tournament-view";
 
 type MyStatus = Participant["status"];
 
@@ -75,7 +80,9 @@ export function TournamentBrowser({ username }: { username: string }) {
       ) : (
         <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
           {tournaments.map((t) => {
-            const accent = accentFor(t.game);
+            // The card takes its colour from the tournament tier, so the whole
+            // Tournaments list is scannable by tier at a glance.
+            const accent = tierAccent(t.tier);
             const mine = myStatus[t.id];
             const isFull = t.registeredTeams >= t.maxTeams;
             const pct =
@@ -152,6 +159,25 @@ export function TournamentBrowser({ username }: { username: string }) {
                           </span>
                         ))}
                     </div>
+                  )}
+                  {t.tier === "exhibition" ? (
+                    <p
+                      className="mt-2 text-[11px] font-extrabold uppercase tracking-[0.5px]"
+                      style={{ color: accent }}
+                    >
+                      Exhibition · no points
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-[11.5px] font-bold text-white/45">
+                      <span className="font-extrabold" style={{ color: accent }}>
+                        ★ {tierShort(t.tier)}
+                      </span>{" "}
+                      · up to{" "}
+                      <span className="font-extrabold text-white/70">
+                        {t.seasonPoints.champion}
+                      </span>{" "}
+                      pts
+                    </p>
                   )}
                 </div>
 

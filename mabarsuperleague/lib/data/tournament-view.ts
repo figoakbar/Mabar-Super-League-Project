@@ -18,6 +18,26 @@ export function accentFor(name: string): string {
   return ACCENTS[Math.abs(h) % ACCENTS.length];
 }
 
+// Tier accent colours — kept in sync with the How to Play tier cards so a
+// tournament reads the same colour everywhere (Minor blue, Major purple,
+// Championship gold, Exhibition a neutral grey since it earns no points).
+const TIER_ACCENTS: Record<string, string> = {
+  minor: "#4FA3E0",
+  major: "#8E7BFF",
+  championship: "#FFB800",
+  exhibition: "#8B93A7",
+};
+
+/** Accent colour for a tournament tier. */
+export function tierAccent(tier: string): string {
+  return TIER_ACCENTS[tier] ?? TIER_ACCENTS.minor;
+}
+
+/** Short, capitalised tier name for a compact label ("Minor", "Championship"). */
+export function tierShort(tier: string): string {
+  return tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "";
+}
+
 const AVATAR_BGS = [
   "linear-gradient(160deg, #4FA3E0, #2B6FA8)",
   "linear-gradient(160deg, #8E7BFF, #5B3FD4)",
