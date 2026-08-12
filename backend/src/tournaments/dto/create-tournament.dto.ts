@@ -65,6 +65,11 @@ export class CreateTournamentDto {
   @IsString()
   registrationDeadline?: string;
 
+  /** Season to assign to. Defaults to the active season when omitted. */
+  @IsOptional()
+  @IsString()
+  seasonId?: string | null;
+
   /** Timeline rows shown on the public tournament page. */
   @IsOptional()
   @IsArray()

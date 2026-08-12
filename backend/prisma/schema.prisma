@@ -78,10 +78,47 @@ model Tournament {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
+  // The season this tournament's results count toward. Nullable so the league
+  // can be dormant (no active season) and so existing rows migrate cleanly.
+  season               Season?  @relation(fields: [seasonId], references: [id])
+  seasonId             String?
+
   participants Participant[]
   matches      Match[]
   raceResults  RaceResult[]
   schedule     ScheduleItem[]
+
+  @@index([seasonId])
+}
+
+/// A competitive season. Started and closed manually by an admin (not tied to
+/// the calendar). Tournaments belong to a season; the leaderboard buckets its
+/// points by season. Invariant, enforced in the service: at most one `active`.
+model Season {
+  id        String    @id @default(cuid())
+  name      String
+  status    String    @default("active") // active | closed
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tournaments Tournament[]
+  champions   SeasonChampion[]
+}
+
+/// Frozen record of who topped a season, captured when the season is closed.
+/// One row per game plus one overall (game = ""). Powers the Hall of Fame.
+model SeasonChampion {
+  id        String   @id @default(cuid())
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId  String
+  game      String   @default("") // "" = overall champion; otherwise per-game
+  username  String
+  points    Int
+  createdAt DateTime @default(now())
+
+  @@index([seasonId])
 }
 
 /// Timeline entries an admin sets per tournament (bracket draw, round dates,

@@ -64,6 +64,11 @@ export class UpdateTournamentDto {
   @IsString()
   registrationDeadline?: string;
 
+  /** Reassign the tournament to a different season (or null to unassign). */
+  @IsOptional()
+  @IsString()
+  seasonId?: string | null;
+
   /** When present, replaces the tournament's whole schedule. */
   @IsOptional()
   @IsArray()

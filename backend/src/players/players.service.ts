@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { tournamentPoints } from "../leaderboard/points.util";
 
 /** A public-safe player card, with stats derived from real match history. */
 export type PublicPlayer = {
@@ -12,7 +13,7 @@ export type PublicPlayer = {
   winRate: number; // 0–100
   trophies: number;
   mainGame: string;
-  records: { game: string; w: number; l: number }[];
+  records: { game: string; w: number; l: number; points: number }[];
   championships: string[];
   tournaments: { name: string; game: string; date: string; result: string }[];
 };
@@ -20,6 +21,7 @@ export type PublicPlayer = {
 type PerTournament = {
   name: string;
   game: string;
+  tier: string;
   date: string; // formatted for display, e.g. "Apr 2025"
   sort: string; // raw startDate, so history sorts chronologically
   status: string;
@@ -115,10 +117,20 @@ export class PlayersService {
       });
     }
 
+    // Confirmed-participant count per tournament, for the field-size bonus.
+    const fieldCount = new Map<string, number>();
+    for (const p of participants) {
+      fieldCount.set(
+        p.tournament.id,
+        (fieldCount.get(p.tournament.id) ?? 0) + 1,
+      );
+    }
+
     type TournamentLite = {
       id: string;
       name: string;
       game: string;
+      tier: string;
       startDate: string;
       status: string;
     };
@@ -128,6 +140,7 @@ export class PlayersService {
       const created: PerTournament = {
         name: t.name,
         game: t.game,
+        tier: t.tier,
         date: formatDate(t.startDate),
         sort: t.startDate,
         status: t.status,
@@ -180,8 +193,32 @@ export class PlayersService {
       const total = a.wins + a.losses;
       const winRate = total ? Math.round((a.wins / total) * 100) : 0;
 
+      // Career season points per game (same formula as the leaderboard) —
+      // only completed tournaments count, matching the leaderboard.
+      const gamePoints = new Map<string, number>();
+      for (const [tid, t] of a.tournaments) {
+        if (t.status !== "completed") continue;
+        gamePoints.set(
+          t.game,
+          (gamePoints.get(t.game) ?? 0) +
+            tournamentPoints(
+              {
+                wonFinal: t.wonFinal,
+                lostRound: t.lostRound,
+                playedAny: t.wins + t.losses > 0,
+              },
+              t.tier,
+              fieldCount.get(tid) ?? 0,
+            ),
+        );
+      }
       const records = [...a.perGame.entries()]
-        .map(([game, r]) => ({ game, w: r.w, l: r.l }))
+        .map(([game, r]) => ({
+          game,
+          w: r.w,
+          l: r.l,
+          points: gamePoints.get(game) ?? 0,
+        }))
         .sort((x, y) => y.w + y.l - (x.w + x.l));
 
       const tournaments = [...a.tournaments.values()]

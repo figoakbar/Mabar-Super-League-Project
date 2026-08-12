@@ -10,7 +10,10 @@ export class LeaderboardController {
 
   @Public()
   @Get()
-  standings(@Query("season") season?: string) {
-    return this.leaderboard.standings(season);
+  standings(
+    @Query("season") season?: string,
+    @Query("game") game?: string,
+  ) {
+    return this.leaderboard.standings(season, game);
   }
 }
