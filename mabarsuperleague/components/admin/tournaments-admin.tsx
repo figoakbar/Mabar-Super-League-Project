@@ -246,7 +246,8 @@ export function TournamentsAdmin() {
         // active season on the backend.
         await api.updateTournament(editing.id, {
           ...payload,
-          seasonId: form.seasonId || null,
+          seasonId:
+            form.tier === "exhibition" ? null : form.seasonId || null,
         });
       else await api.createTournament(payload);
       setOpen(false);
@@ -563,7 +564,11 @@ export function TournamentsAdmin() {
                   </option>
                 ))}
               </Select>
-              {editing ? (
+              {form.tier === "exhibition" ? (
+                <Select label="SEASON" value="" disabled onChange={() => {}}>
+                  <option value="">Outside any season</option>
+                </Select>
+              ) : editing ? (
                 <Select
                   label="SEASON"
                   value={form.seasonId}

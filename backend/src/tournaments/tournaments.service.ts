@@ -92,9 +92,12 @@ export class TournamentsService {
 
   async create(dto: CreateTournamentDto) {
     const { schedule, ...rest } = dto;
-    // A new tournament joins the active season unless one was picked explicitly.
+    // Exhibition tournaments are friendlies — they live outside any season.
+    // Otherwise a new tournament joins the active season (unless one was picked).
     const seasonId =
-      rest.seasonId ?? (await this.seasons.activeSeasonId()) ?? undefined;
+      rest.tier === "exhibition"
+        ? null
+        : (rest.seasonId ?? (await this.seasons.activeSeasonId()) ?? undefined);
     const row = await this.prisma.tournament.create({
       data: {
         ...rest,
@@ -119,6 +122,8 @@ export class TournamentsService {
       where: { id },
       data: {
         ...rest,
+        // Switching a tournament to exhibition drops it out of its season.
+        ...(rest.tier === "exhibition" ? { seasonId: null } : {}),
         // A supplied schedule replaces the existing one wholesale.
         ...(schedule
           ? {
