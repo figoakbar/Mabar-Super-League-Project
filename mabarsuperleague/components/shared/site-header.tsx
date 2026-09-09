@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { IaglMark } from "@/components/shared/iagl-mark";
+import { IaglWordmark } from "@/components/shared/iagl-wordmark";
 import { MobileNav } from "@/components/shared/mobile-nav";
 import { NavLinks } from "@/components/shared/nav-links";
 import { UserMenu } from "@/components/shared/user-menu";
@@ -25,11 +27,12 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0A0B0D]/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between gap-4 px-6 py-[18px] sm:px-10">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid size-[30px] place-items-center rounded-md bg-[#FFB800]">
-            <span className="size-2.5 bg-[#0A0B0D]" />
-          </span>
-          <span className="font-display text-base font-bold tracking-[2px] text-white sm:text-xl">
-            MABAR SUPER LEAGUE
+          <IaglMark className="size-[40px]" />
+          <span className="flex flex-col items-start gap-[3px] leading-none">
+            <IaglWordmark className="h-[18px]" />
+            <span className="hidden whitespace-nowrap text-[7.5px] font-bold uppercase tracking-[1.4px] text-white/40 sm:block">
+              Indonesia Arcadia Gaming League
+            </span>
           </span>
         </Link>
 

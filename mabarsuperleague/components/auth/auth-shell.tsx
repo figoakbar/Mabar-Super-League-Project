@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { IaglMark } from "@/components/shared/iagl-mark";
+
 /** Shared chrome for the standalone auth pages (forgot / reset password). */
 export function AuthShell({
   title,
@@ -28,11 +30,9 @@ export function AuthShell({
 
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-[22px] sm:px-10">
         <Link href="/login" className="flex items-center gap-2.5">
-          <span className="grid size-[34px] place-items-center rounded-[10px] bg-gradient-to-br from-[#FFC24B] to-[#F2803B]">
-            <span className="size-3 rounded-[4px] bg-[#1A1108]" />
-          </span>
+          <IaglMark className="size-[36px]" />
           <span className="font-baloo text-[19px] font-extrabold tracking-[0.3px] text-white">
-            Mabar Super League
+            Indonesia Arcadia Gaming League
           </span>
         </Link>
       </div>
