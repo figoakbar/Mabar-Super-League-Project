@@ -19,24 +19,6 @@ import {
 
 type MyStatus = "none" | "pending" | "confirmed" | "rejected";
 
-const rules = [
-  { n: 1, title: "Check-in", text: "Players must check in on Discord 30 minutes before their scheduled match; no-show after 15 minutes counts as a forfeit." },
-  { n: 2, title: "Result reporting", text: "Match results must be reported with a screenshot of the final score screen in the results channel." },
-  { n: 3, title: "Disconnects", text: "Before the 10th minute: match is replayed from 0-0. After the 10th minute: current score stands, remaining time is played out." },
-  { n: 4, title: "Fair play", text: "Custom tactics and formations are free; exploiting known game bugs results in an immediate disqualification." },
-  { n: 5, title: "Disputes", text: "Admin decisions are final. Disputes must be raised within 15 minutes after the match ends." },
-  { n: 6, title: "Conduct", text: "Toxic behavior, slurs, or harassment in chat or comms leads to removal without refund." },
-];
-
-const terms = [
-  { n: 1, title: "Eligibility", text: "Participants must have a verified MSL account and be at least 13 years old. One account per player; smurfing or account sharing is prohibited." },
-  { n: 2, title: "Entry fee & refunds", text: "Entry fees are only refundable if the tournament is cancelled by the organizer. Rejected payment verifications are fully refunded." },
-  { n: 3, title: "Payment verification", text: "Slots are confirmed only after admin verifies your payment receipt (max 1×24 hours). Unverified payments before registration close forfeit the slot." },
-  { n: 4, title: "Prizes", text: "Prizes are transferred within 7 working days after the grand final to the account name registered on the platform." },
-  { n: 5, title: "Content & broadcast", text: "Matches may be streamed, recorded, and used for MSL promotional content. Player usernames may appear on public brackets and leaderboards." },
-  { n: 6, title: "Changes", text: "The organizer may adjust schedules, brackets, or these terms at any time; registered players are notified via Discord and email." },
-];
-
 // Knockout round labels sized to the bracket (e.g. 16 → R16 → QF → SF → Final).
 function knockoutStages(bracketSize: number): string[] {
   let size = 2;
@@ -82,47 +64,6 @@ const medals = [
   { rank: "3rd", label: "Third place", medalBg: "rgba(217,142,82,0.12)", medalColor: "#D98E52", border: "rgba(255,255,255,0.1)", share: 0.2 },
 ];
 
-function DocPanel({
-  title,
-  version,
-  items,
-  footer,
-}: {
-  title: string;
-  version: string;
-  items: { n: number; title: string; text: string }[];
-  footer: string;
-}) {
-  return (
-    <div className="flex flex-col gap-4 rounded-[10px] bg-[#FDFBF6] px-6 py-7 sm:px-8">
-      <div className="flex flex-col gap-0.5 border-b-2 border-[#1A1108] pb-3.5">
-        <span className="font-display text-[19px] font-extrabold text-[#1A1108]">
-          {title}
-        </span>
-        <span className="text-xs font-bold text-[#1A1108]/50">{version}</span>
-      </div>
-      {items.map((r) => (
-        <div key={r.n} className="flex gap-3.5">
-          <span className="font-display text-sm font-extrabold text-[#B8791A]">
-            {r.n}.
-          </span>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-extrabold text-[#1A1108]">
-              {r.title}
-            </span>
-            <span className="text-[13.5px] font-semibold leading-[1.65] text-[#1A1108]/70">
-              {r.text}
-            </span>
-          </div>
-        </div>
-      ))}
-      <span className="border-t border-[#1A1108]/15 pt-2.5 text-xs font-bold text-[#1A1108]/45">
-        {footer}
-      </span>
-    </div>
-  );
-}
-
 export function TournamentDetail({
   t,
   username,
@@ -130,8 +71,6 @@ export function TournamentDetail({
   t: TournamentDetailData;
   username: string;
 }) {
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [termsOpen, setTermsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -268,7 +207,7 @@ export function TournamentDetail({
                 {t.name}
               </h1>
               <span className="text-sm font-semibold text-white/50">
-                Hosted by Mabar Super League Official · Registration closes{" "}
+                Hosted by Indonesia Arcadia Gaming League Official · Registration closes{" "}
                 <span className="font-extrabold text-[#FFB800]">{regEnds}</span>
               </span>
               {t.description && (
@@ -308,54 +247,23 @@ export function TournamentDetail({
           {/* Rules & terms buttons */}
           <div className="flex flex-col gap-3.5">
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => {
-                  setRulesOpen((v) => !v);
-                  setTermsOpen(false);
-                }}
-                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl border px-4 py-3.5 font-display text-[15px] font-extrabold transition hover:brightness-110"
-                style={{
-                  background: rulesOpen ? "#FFB800" : "rgba(255,184,0,0.1)",
-                  borderColor: rulesOpen ? "#FFB800" : "rgba(255,184,0,0.35)",
-                  color: rulesOpen ? "#0A0B0D" : "#FFB800",
-                }}
+              <a
+                href="/docs/rules.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl border border-[#FFB800]/35 bg-[#FFB800]/10 px-4 py-3.5 font-display text-[15px] font-extrabold text-[#FFB800] transition hover:brightness-110"
               >
-                📄 {rulesOpen ? "Close Rules" : "View Rules"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTermsOpen((v) => !v);
-                  setRulesOpen(false);
-                }}
-                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl border px-4 py-3.5 font-display text-[15px] font-extrabold transition hover:brightness-110"
-                style={{
-                  background: termsOpen ? "#FFB800" : "rgba(255,255,255,0.04)",
-                  borderColor: termsOpen ? "#FFB800" : "rgba(255,255,255,0.14)",
-                  color: termsOpen ? "#0A0B0D" : "rgba(255,255,255,0.7)",
-                }}
+                📄 View Rules
+              </a>
+              <a
+                href="/docs/terms.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.14] bg-white/[0.04] px-4 py-3.5 font-display text-[15px] font-extrabold text-white/70 transition hover:text-white hover:brightness-110"
               >
-                📋 {termsOpen ? "Close Terms & Conditions" : "Terms & Conditions"}
-              </button>
+                📋 Terms & Conditions
+              </a>
             </div>
-
-            {rulesOpen && (
-              <DocPanel
-                title="Official Rulebook — MSL"
-                version="Version 2.1 · Updated 14 Jul 2026 · PT Mabar Super League Indonesia"
-                items={rules}
-                footer="By registering you agree to the full rulebook. Admin decisions are final."
-              />
-            )}
-            {termsOpen && (
-              <DocPanel
-                title="Terms & Conditions"
-                version="Version 1.3 · Updated 14 Jul 2026 · PT Mabar Super League Indonesia"
-                items={terms}
-                footer="These terms apply to all MSL tournaments and events."
-              />
-            )}
           </div>
 
           {/* Format */}
@@ -536,7 +444,7 @@ export function TournamentDetail({
                       8830 0912 3456
                     </span>
                     <span className="text-xs font-bold text-white/45">
-                      a.n. PT Mabar Super League Indonesia
+                      a.n. PT Indonesia Arcadia Gaming League Indonesia
                     </span>
                   </div>
                 </div>

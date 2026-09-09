@@ -45,6 +45,6 @@ export const config = {
   // and redirecting them would break the Google OAuth callback and the /api/msl
   // gateway that signed-out visitors use to read public data.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|uploads|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|uploads|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|pdf)$).*)",
   ],
 };
