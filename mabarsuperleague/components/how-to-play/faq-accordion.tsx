@@ -9,7 +9,7 @@ const faqs = [
   },
   {
     q: "How are match scores recorded?",
-    a: "Admins record every result in the tournament's Matches & Scores — you don't self-report. The bracket, standings and your player record update automatically after each match.",
+    a: "After each match, send your result to an admin — a screenshot, the final score, and who won. The admin records it in the tournament's Matches & Scores, so the bracket, standings and your player record update automatically. You don't enter scores into the bracket yourself.",
   },
   {
     q: "Can I play on any platform?",

@@ -71,8 +71,8 @@ const flow = [
   },
   {
     n: "3",
-    title: "Scores are recorded by admins",
-    text: "After each match an admin enters the result. The bracket, standings and your player record update automatically — no self-reporting needed.",
+    title: "Report your result to an admin",
+    text: "After each match, send an admin your result — a screenshot, the final score, and who won. The admin records it, and the bracket, standings and your player record then update automatically.",
     dotBg: "rgba(255,255,255,0.05)",
     dotBorder: "rgba(255,255,255,0.15)",
     dotColor: "rgba(255,255,255,0.6)",
@@ -231,12 +231,27 @@ export default function HowToPlayPage() {
             </h1>
             <p className="max-w-[520px] text-[15px] font-semibold leading-[1.65] text-white/55">
               From sign-up to lifting the trophy — here&apos;s everything you
-              need to join your first MSL tournament.
+              need to join your first IAGL tournament.
             </p>
           </div>
         </section>
 
         <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-12 px-6 pb-20 pt-11 sm:px-10">
+          {/* Spirit of IAGL — friendly, for fun, not cut-throat */}
+          <div className="flex items-start gap-3.5 rounded-xl border border-[#FFB800]/25 bg-[#FFB800]/[0.06] px-5 py-4">
+            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-[#FFB800]/15 font-display text-sm font-extrabold text-[#FFB800]">
+              ★
+            </span>
+            <p className="text-[14px] font-semibold leading-[1.65] text-white/65">
+              <span className="font-extrabold text-[#FFB800]">
+                Play for fun and respect.
+              </span>{" "}
+              IAGL tournaments are friendly — they&apos;re about enjoying the game
+              together, not serious competition. Play your best, be a good sport,
+              and treat your opponents well.
+            </p>
+          </div>
+
           {/* Steps */}
           <section className="flex flex-col gap-5">
             <h2 className="font-display text-2xl font-extrabold text-white">
