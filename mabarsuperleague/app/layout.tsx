@@ -44,8 +44,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Mabar Super League",
-    template: "%s | Mabar Super League",
+    default: "Indonesia Arcadia Gaming League",
+    template: "%s | Indonesia Arcadia Gaming League",
   },
   description:
     "Community esports tournament platform — join tournaments, climb the leaderboard.",

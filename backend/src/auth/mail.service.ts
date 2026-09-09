@@ -37,9 +37,9 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, link: string, expiresMinutes: number) {
-    const subject = "Reset your Mabar Super League password";
+    const subject = "Reset your Indonesia Arcadia Gaming League password";
     const text = [
-      "We received a request to reset your Mabar Super League password.",
+      "We received a request to reset your Indonesia Arcadia Gaming League password.",
       "",
       `Open this link to choose a new password (valid for ${expiresMinutes} minutes):`,
       link,

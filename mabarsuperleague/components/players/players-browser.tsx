@@ -73,7 +73,7 @@ function toView(p: PublicPlayer, isYou: boolean): PlayerView {
   const badges =
     p.championships.length > 0
       ? p.championships.map((n) => ({
-          label: `🏆 ${n.replace(/^MSL /, "")}`,
+          label: `🏆 ${n.replace(/^IAGL /, "")}`,
           ...goldBadge,
         }))
       : played > 0

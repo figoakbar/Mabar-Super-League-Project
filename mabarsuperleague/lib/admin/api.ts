@@ -1,4 +1,4 @@
-// Client for the MSL backend (NestJS), used by both the public pages and /admin.
+// Client for the IAGL backend (NestJS), used by both the public pages and /admin.
 //
 // Requests take one of two routes:
 //   • Server-side (RSC, server actions) → straight to the backend.

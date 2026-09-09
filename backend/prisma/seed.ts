@@ -40,7 +40,7 @@ type SeedTournament = {
 const tournaments: SeedTournament[] = [
   {
     id: "fc5",
-    name: "MSL Championship S5 — Late Qualifier",
+    name: "IAGL Championship S5 — Late Qualifier",
     game: "EA FC",
     description:
       "The flagship EA FC 1v1 championship. Groups A–D, top 2 of each group advance to a single-elimination knockout.",
@@ -172,10 +172,10 @@ const tournaments: SeedTournament[] = [
     matches: [],
   },
   {
-    name: "MSL Mobile Legends Season 3",
+    name: "IAGL Mobile Legends Season 3",
     game: "Mobile Legends: Bang Bang",
     description:
-      "The flagship Mobile Legends tournament of Mabar Super League. Group stage followed by single-elimination playoffs.",
+      "The flagship Mobile Legends tournament of Indonesia Arcadia Gaming League. Group stage followed by single-elimination playoffs.",
     status: "open",
     format: "group_knockout",
     prizePool: 15000000,
@@ -190,7 +190,7 @@ const tournaments: SeedTournament[] = [
     ],
   },
   {
-    name: "MSL Valorant Community Cup",
+    name: "IAGL Valorant Community Cup",
     game: "Valorant",
     description:
       "A community-driven Valorant cup for amateur and semi-pro teams. Double elimination, all matches online.",
@@ -207,7 +207,7 @@ const tournaments: SeedTournament[] = [
     ],
   },
   {
-    name: "MSL eFootball Open 2026",
+    name: "IAGL eFootball Open 2026",
     game: "eFootball",
     description:
       "1v1 eFootball tournament over two weekends. Swiss rounds then a top-8 knockout bracket.",

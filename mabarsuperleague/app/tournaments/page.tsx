@@ -131,7 +131,7 @@ export default async function TournamentsPage() {
                 Become a <span className="text-[#FFB800]">Champion</span>.
               </h1>
               <p className="max-w-[460px] text-[15.5px] font-semibold leading-[1.65] text-white/55">
-                Join official MSL tournaments across football, racing, tennis,
+                Join official IAGL tournaments across football, racing, tennis,
                 and arcade games. Registration takes less than a minute.
               </p>
               <div className="mt-1.5 flex flex-wrap gap-3">

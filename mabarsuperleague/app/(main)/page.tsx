@@ -110,7 +110,7 @@ export default async function HomePage() {
               Hi, {username}
             </h1>
             <span className="text-[13px] font-semibold text-white/45">
-              Your MSL dashboard
+              Your IAGL dashboard
             </span>
           </div>
         </div>

@@ -250,7 +250,7 @@ export function RegisterForm() {
           <Link href="#" className="font-bold text-[#FFC833] hover:underline">
             Privacy Policy
           </Link>{" "}
-          of Mabar Super League.
+          of Indonesia Arcadia Gaming League.
         </span>
       </label>
 

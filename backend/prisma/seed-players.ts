@@ -111,7 +111,7 @@ async function ensureTournament(def: TournamentDef): Promise<string> {
     data: {
       name: def.name,
       game: def.game,
-      description: `${def.game} single-elimination — a past MSL season.`,
+      description: `${def.game} single-elimination — a past IAGL season.`,
       status: "completed",
       format: "knockout",
       prizePool: 5_000_000,
@@ -185,14 +185,14 @@ async function main() {
 
   const u = USERNAMES;
   const tournaments: TournamentDef[] = [
-    { name: "MSL EA FC Cup S1", game: "EA FC", startDate: "2025-04-12", roster: u.slice(0, 8) },
-    { name: "MSL Grand Prix Trophy 2025", game: "Grand Prix", startDate: "2025-07-05", roster: u.slice(4, 12) },
-    { name: "MSL Arcade Masters 2025", game: "Arcade Mania", startDate: "2025-10-18", roster: u.slice(8, 16) },
-    { name: "MSL Fantasy League Cup 2026", game: "Fantasy League", startDate: "2026-01-24", roster: u.slice(12, 20) },
-    { name: "MSL Smash Court Open 2026", game: "Smash Court", startDate: "2026-03-14", roster: u.slice(16, 24) },
+    { name: "IAGL EA FC Cup S1", game: "EA FC", startDate: "2025-04-12", roster: u.slice(0, 8) },
+    { name: "IAGL Grand Prix Trophy 2025", game: "Grand Prix", startDate: "2025-07-05", roster: u.slice(4, 12) },
+    { name: "IAGL Arcade Masters 2025", game: "Arcade Mania", startDate: "2025-10-18", roster: u.slice(8, 16) },
+    { name: "IAGL Fantasy League Cup 2026", game: "Fantasy League", startDate: "2026-01-24", roster: u.slice(12, 20) },
+    { name: "IAGL Smash Court Open 2026", game: "Smash Court", startDate: "2026-03-14", roster: u.slice(16, 24) },
     {
       // Includes the platform owner so the signed-in admin also has stats.
-      name: "MSL Champions Invitational 2026",
+      name: "IAGL Champions Invitational 2026",
       game: "EA FC",
       startDate: "2026-06-20",
       roster: ["figoakbar", u[0], u[5], u[9], u[13], u[17], u[21], u[2]],
