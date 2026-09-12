@@ -108,14 +108,14 @@ export default async function LoginPage({
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       >
       <div className="absolute bottom-[-130px] left-1/2 z-[5] h-[430px] w-[1240px] -translate-x-1/2 scale-[0.55] max-lg:origin-bottom sm:scale-75 lg:scale-100">
-        {/* 1. Sepak Bola — ungu */}
+        {/* 1. Play — ungu */}
         <div className="absolute bottom-0 left-0 z-[1] h-[360px] w-[300px] origin-bottom -rotate-[16deg] rounded-[26px] bg-gradient-to-br from-[#8E7BFF] to-[#5B3FD4] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,5" />
           <div className="pr-[68px] font-baloo text-[26px] font-extrabold text-white">
-            Football
+            Play
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Fantasy League
+            Just for Fun
           </div>
           <div className="absolute bottom-[130px] left-1/2 -ml-[55px] h-40 w-[110px]">
             <div className="absolute bottom-0 left-1/2 -ml-[38px] h-3.5 w-[76px] rounded-full bg-black/35 [animation:shadow-squash_1.5s_ease-in-out_infinite]" />
@@ -146,14 +146,14 @@ export default async function LoginPage({
           </div>
         </div>
 
-        {/* 2. Tenis — merah */}
+        {/* 2. Compete — merah */}
         <div className="absolute bottom-11 left-[235px] z-[2] h-[370px] w-[300px] origin-bottom -rotate-[8deg] rounded-[26px] bg-gradient-to-br from-[#FF8A80] to-[#E5484D] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,8" />
           <div className="font-baloo text-[26px] font-extrabold text-white">
-            Tennis
+            Compete
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Smash Court
+            Friendly Rivalry
           </div>
           <div className="absolute bottom-28 left-1/2 -ml-[75px] h-[140px] w-[150px] [animation:float_3.4s_ease-in-out_infinite] [animation-delay:1.3s]">
             <span className="absolute left-[18px] top-1.5 size-2.5 rounded-[2px] bg-[#FFF0B8] [animation:confetti_2.4s_ease-in-out_infinite]" />
@@ -212,13 +212,13 @@ export default async function LoginPage({
           </div>
         </div>
 
-        {/* 4. Motorsport — hijau */}
+        {/* 4. Challenge — hijau */}
         <div className="absolute bottom-11 right-[235px] z-[2] h-[370px] w-[300px] origin-bottom rotate-[8deg] rounded-[26px] bg-gradient-to-br from-[#7EE8A2] to-[#2FA96E] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,2" />
           <div className="pr-[68px] font-baloo text-[26px] font-extrabold text-white">
-            Motorsport
+            Challenge
           </div>
-          <div className="text-[13px] font-bold text-white/65">Grand Prix</div>
+          <div className="text-[13px] font-bold text-white/65">Bring Your Best</div>
           <div className="absolute bottom-24 left-1/2 -ml-[60px] h-[170px] w-[120px]">
             <span className="absolute left-2.5 top-0 h-[26px] w-1 rounded-sm bg-white/60 [animation:speedline_1.1s_linear_infinite]" />
             <span className="absolute right-2.5 top-0 h-[34px] w-1 rounded-sm bg-white/50 [animation:speedline_1.1s_linear_infinite] [animation-delay:0.4s]" />
@@ -239,14 +239,14 @@ export default async function LoginPage({
           </div>
         </div>
 
-        {/* 5. Gaming — oranye */}
+        {/* 5. Glory — oranye */}
         <div className="absolute bottom-0 right-0 z-[1] h-[360px] w-[300px] origin-bottom rotate-[16deg] rounded-[26px] bg-gradient-to-br from-[#FFC46B] to-[#F2803B] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="3,9" />
           <div className="font-baloo text-[26px] font-extrabold text-white">
-            Gaming
+            Glory
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Arcade Mania
+            Bragging Rights
           </div>
           <div className="absolute bottom-40 left-1/2 -ml-[60px] h-[90px] w-[120px] [animation:wobble_2.6s_ease-in-out_infinite]">
             <span className="absolute left-0 top-3.5 h-[60px] w-[120px] rounded-[30px] bg-[#2E2A3E] shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)]" />
