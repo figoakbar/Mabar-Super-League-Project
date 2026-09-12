@@ -142,7 +142,7 @@ export default async function TournamentsPage() {
                   Browse Tournaments
                 </ScrollLink>
                 <Link
-                  href="#"
+                  href="/how-to-play"
                   className="rounded-xl border border-white/[0.16] px-[26px] py-[13px] font-display text-[15px] font-bold text-white transition-colors hover:bg-white/[0.06]"
                 >
                   How it works
