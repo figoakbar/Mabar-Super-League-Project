@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { api, type Participant } from "@/lib/admin/api";
-import { tierAccent } from "@/lib/data/tournament-view";
+import { tierAccent, tierShort } from "@/lib/data/tournament-view";
 
 export type TournamentEntry = {
   tid: string;
   accent: string;
+  tierLabel: string;
   gameLabel: string;
   name: string;
   status: string;
@@ -47,9 +48,26 @@ function TournamentCard({ t }: { t: TournamentEntry }) {
           >
             {t.gameLabel}
           </span>
-          <span className="text-[15.5px] font-extrabold text-white">
-            {t.name}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[15.5px] font-extrabold text-white">
+              {t.name}
+            </span>
+            {/* tier badge — inline styles so it survives a stale stylesheet */}
+            <span
+              className="inline-flex items-center gap-1 font-extrabold uppercase"
+              style={{
+                color: t.accent,
+                background: `${t.accent}1f`,
+                fontSize: "10px",
+                letterSpacing: "0.5px",
+                padding: "2px 7px",
+                borderRadius: "5px",
+              }}
+            >
+              <span aria-hidden>★</span>
+              {t.tierLabel}
+            </span>
+          </div>
         </div>
         <div
           className="shrink-0 whitespace-nowrap rounded-[5px] px-3 py-[5px] text-[11px] font-extrabold uppercase tracking-[0.8px]"
@@ -115,6 +133,7 @@ const STATUS = {
 
 function toEntry(r: Participant): TournamentEntry {
   const game = r.tournament?.game ?? "Tournament";
+  const tier = r.tournament?.tier ?? "minor";
   const tStatus = r.tournament?.status;
   // A confirmed player sees "Ongoing" once the tournament is live, "Joined"
   // while it's still before kickoff; pending stays pending; finished shows done.
@@ -128,9 +147,10 @@ function toEntry(r: Participant): TournamentEntry {
           : STATUS.joined;
   return {
     tid: r.tournamentId,
-    // Strip colour reflects the tournament tier (minor / major / championship /
-    // exhibition) — matching the Tournaments page and How to Play tier cards.
-    accent: tierAccent(r.tournament?.tier ?? "minor"),
+    // Strip colour + label reflect the tournament tier (minor / major /
+    // championship / exhibition) — matching the Tournaments page and How to Play.
+    accent: tierAccent(tier),
+    tierLabel: tierShort(tier),
     gameLabel: game.toUpperCase(),
     name: r.tournament?.name ?? "Tournament",
     href: `/tournaments/${r.tournamentId}`,
