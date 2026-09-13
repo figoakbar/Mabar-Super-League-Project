@@ -8,6 +8,8 @@ export function IaglWordmark({ className }: { className?: string }) {
     <img
       src="/iagl-wordmark.png"
       alt="IAGL"
+      width={84}
+      height={18}
       className={`w-auto object-contain ${className ?? ""}`}
     />
   );

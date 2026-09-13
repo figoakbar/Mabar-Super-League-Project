@@ -10,6 +10,8 @@ export function IaglMark({ className }: { className?: string }) {
     <img
       src="/iagl-mark.png"
       alt="IAGL"
+      width={40}
+      height={40}
       className={`object-contain ${className ?? ""}`}
     />
   );
