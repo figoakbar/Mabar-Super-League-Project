@@ -131,6 +131,7 @@ export type Participant = {
     name: string;
     game?: string;
     status?: TournamentStatus;
+    tier?: TournamentTier;
   };
 };
 

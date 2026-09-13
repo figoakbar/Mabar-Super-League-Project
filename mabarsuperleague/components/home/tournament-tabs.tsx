@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { api, type Participant } from "@/lib/admin/api";
-import { accentFor } from "@/lib/data/tournament-view";
+import { tierAccent } from "@/lib/data/tournament-view";
 
 export type TournamentEntry = {
   tid: string;
-  tag: string;
   accent: string;
   gameLabel: string;
   name: string;
@@ -17,53 +16,68 @@ export type TournamentEntry = {
   statusColor: string;
   note: string;
   href: string;
+  live?: boolean;
 };
 
 function TournamentCard({ t }: { t: TournamentEntry }) {
   return (
     <Link
       href={t.href}
-      className="block overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#101114] transition-colors hover:border-white/[0.22]"
+      className="relative block overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#101114] transition-colors hover:border-white/[0.22]"
     >
+      {/* accent strip along the left edge — the card's tier colour. Inline
+          styles (not Tailwind arbitrary classes) so it always renders, even if
+          a cached/older stylesheet is missing the generated width rule. */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: "3px",
+          background: t.accent,
+        }}
+      />
       <div className="flex items-center justify-between gap-3 px-5 py-4">
-        <div className="flex items-center gap-3.5">
-          <div
-            className="grid size-11 place-items-center rounded-lg border bg-white/[0.04]"
-            style={{ borderColor: t.accent }}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span
+            className="text-[10.5px] font-extrabold tracking-[1.5px]"
+            style={{ color: t.accent }}
           >
-            <span
-              className="font-display text-[15px] font-bold"
-              style={{ color: t.accent }}
-            >
-              {t.tag}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span
-              className="text-[10.5px] font-extrabold tracking-[1.5px]"
-              style={{ color: t.accent }}
-            >
-              {t.gameLabel}
-            </span>
-            <span className="text-[15.5px] font-extrabold text-white">
-              {t.name}
-            </span>
-          </div>
+            {t.gameLabel}
+          </span>
+          <span className="text-[15.5px] font-extrabold text-white">
+            {t.name}
+          </span>
         </div>
         <div
-          className="whitespace-nowrap rounded-[5px] px-3 py-[5px] text-[11px] font-extrabold uppercase tracking-[0.8px]"
+          className="shrink-0 whitespace-nowrap rounded-[5px] px-3 py-[5px] text-[11px] font-extrabold uppercase tracking-[0.8px]"
           style={{ background: t.statusBg, color: t.statusColor }}
         >
           {t.status}
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 border-t border-white/[0.06] bg-black/35 px-5 py-[11px]">
-        <span
-          className="size-[7px] rounded-full"
-          style={{ background: t.statusColor }}
-        />
-        <span className="text-[12.5px] font-semibold text-white/55">
+      <div className="flex items-center gap-2.5 border-t border-white/[0.06] px-5 py-2.5">
+        {t.live ? (
+          <span className="relative flex size-[7px]">
+            <span
+              className="absolute inline-flex size-full animate-ping rounded-full opacity-75"
+              style={{ background: t.statusColor }}
+            />
+            <span
+              className="relative inline-flex size-[7px] rounded-full"
+              style={{ background: t.statusColor }}
+            />
+          </span>
+        ) : (
+          <span
+            className="size-[7px] rounded-full"
+            style={{ background: t.statusColor }}
+          />
+        )}
+        <span className="text-[12px] font-semibold text-white/45">
           {t.note}
         </span>
       </div>
@@ -89,6 +103,7 @@ const STATUS = {
     statusBg: "rgba(224,96,85,0.14)",
     statusColor: "#E06055",
     note: "This tournament is live — check the bracket for your matches.",
+    live: true,
   },
   completed: {
     status: "Completed",
@@ -113,8 +128,9 @@ function toEntry(r: Participant): TournamentEntry {
           : STATUS.joined;
   return {
     tid: r.tournamentId,
-    tag: game.slice(0, 2).toUpperCase(),
-    accent: accentFor(game),
+    // Strip colour reflects the tournament tier (minor / major / championship /
+    // exhibition) — matching the Tournaments page and How to Play tier cards.
+    accent: tierAccent(r.tournament?.tier ?? "minor"),
     gameLabel: game.toUpperCase(),
     name: r.tournament?.name ?? "Tournament",
     href: `/tournaments/${r.tournamentId}`,

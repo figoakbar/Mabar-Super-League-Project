@@ -23,7 +23,7 @@ export class ParticipantsService {
       orderBy: { createdAt: "asc" },
       include: {
         tournament: {
-          select: { id: true, name: true, game: true, status: true },
+          select: { id: true, name: true, game: true, status: true, tier: true },
         },
       },
     });
