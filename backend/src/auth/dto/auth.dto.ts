@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsBoolean,
   IsEmail,
   IsOptional,
@@ -48,6 +49,17 @@ export class RegisterDto {
   @IsString()
   @MaxLength(80)
   instagram?: string;
+
+  /**
+   * Accepting the Terms and Privacy Policy is part of creating an account, so
+   * the API requires it too — a client that forgets to ask cannot register
+   * someone who never agreed.
+   */
+  @IsBoolean()
+  @Equals(true, {
+    message: "you must accept the Terms and Privacy Policy to register",
+  })
+  agree: boolean;
 
   @IsOptional()
   @IsBoolean()

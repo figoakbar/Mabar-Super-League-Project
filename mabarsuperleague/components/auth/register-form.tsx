@@ -2,6 +2,8 @@
 
 import {
   useActionState,
+  useEffect,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -43,6 +45,25 @@ export function RegisterForm() {
   const [consolePicks, setConsolePicks] = useState<Record<string, string>>({});
   const [pcPicks, setPcPicks] = useState<Record<string, string>>({});
   const [agreed, setAgreed] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // React clears the form's DOM once a server action finishes, which unticks
+  // every checkbox on screen while our state still says they are ticked —
+  // leaving Create Account live over a consent box the user can see is empty.
+  // Follow the form's own reset so the two can never disagree.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const onReset = () => {
+      setAgreed(false);
+      setOnConsole(false);
+      setOnPc(false);
+      setConsolePicks({});
+      setPcPicks({});
+    };
+    form.addEventListener("reset", onReset);
+    return () => form.removeEventListener("reset", onReset);
+  }, []);
 
   const togglePick =
     (setter: Dispatch<SetStateAction<Record<string, string>>>) =>
@@ -75,6 +96,7 @@ export function RegisterForm() {
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       className="mt-2.5 flex w-full max-w-[520px] flex-col gap-3.5 rounded-3xl border border-white/[0.09] bg-[#15151b]/90 p-7 pb-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
     >
@@ -263,6 +285,11 @@ export function RegisterForm() {
           of Indonesia Arcadia Gaming League.
         </span>
       </label>
+      {state.fieldErrors?.agree && (
+        <p className="-mt-1 text-xs font-bold text-[#FF8A80]">
+          {state.fieldErrors.agree}
+        </p>
+      )}
 
       <button
         type="submit"

@@ -103,6 +103,13 @@ export async function register(
   if (password.length < 8) {
     return { fieldErrors: { password: "Use at least 8 characters." } };
   }
+  // Consent is checked here, not only by disabling the button: an unticked box
+  // is simply absent from the form data, so this is the gate that actually holds.
+  if (formData.get("agree") == null) {
+    return {
+      fieldErrors: { agree: "Please accept the Terms and Privacy Policy." },
+    };
+  }
 
   const { ok, payload } = await post("/auth/register", {
     email: String(formData.get("email") ?? "").trim(),
@@ -112,6 +119,7 @@ export async function register(
     consoleId: String(formData.get("consoleId") ?? "").trim(),
     pcId: String(formData.get("pcId") ?? "").trim(),
     instagram: String(formData.get("instagram") ?? "").trim(),
+    agree: true,
     remember: true,
   });
   if (!ok) {
