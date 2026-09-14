@@ -45,22 +45,23 @@ export function RegisterForm() {
   const [consolePicks, setConsolePicks] = useState<Record<string, string>>({});
   const [pcPicks, setPcPicks] = useState<Record<string, string>>({});
   const [agreed, setAgreed] = useState(false);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [instagram, setInstagram] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const [formNonce, setFormNonce] = useState(0);
 
-  // React clears the form's DOM once a server action finishes, which unticks
-  // every checkbox on screen while our state still says they are ticked —
-  // leaving Create Account live over a consent box the user can see is empty.
-  // Follow the form's own reset so the two can never disagree.
+  // React clears the form's DOM once a server action finishes, so a rejected
+  // sign-up would otherwise throw away everything typed. Every text field here
+  // is controlled, so React puts those back from state by itself — but it does
+  // not restore a checkbox, which is how the consent box could end up unticked
+  // on screen while the button still thought it was agreed. Remounting the
+  // boxes on reset restores their ticks and keeps state and screen in step.
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    const onReset = () => {
-      setAgreed(false);
-      setOnConsole(false);
-      setOnPc(false);
-      setConsolePicks({});
-      setPcPicks({});
-    };
+    const onReset = () => setFormNonce((n) => n + 1);
     form.addEventListener("reset", onReset);
     return () => form.removeEventListener("reset", onReset);
   }, []);
@@ -118,6 +119,8 @@ export function RegisterForm() {
             name="username"
             placeholder="your_gamertag"
             required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className={authInputClass}
           />
         </div>
@@ -129,6 +132,8 @@ export function RegisterForm() {
             type="email"
             placeholder="you@email.com"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className={authInputClass}
           />
         </div>
@@ -143,6 +148,8 @@ export function RegisterForm() {
           inputMode="tel"
           placeholder="08xx xxxx xxxx"
           required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           className={authInputClass}
         />
       </div>
@@ -181,6 +188,7 @@ export function RegisterForm() {
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <label className="flex cursor-pointer items-center gap-2 text-[13.5px] font-bold text-white/70">
             <input
+              key={`console-${formNonce}`}
               type="checkbox"
               checked={onConsole}
               onChange={(e) => setOnConsole(e.target.checked)}
@@ -190,6 +198,7 @@ export function RegisterForm() {
           </label>
           <label className="flex cursor-pointer items-center gap-2 text-[13.5px] font-bold text-white/70">
             <input
+              key={`pc-${formNonce}`}
               type="checkbox"
               checked={onPc}
               onChange={(e) => setOnPc(e.target.checked)}
@@ -251,12 +260,15 @@ export function RegisterForm() {
           id="instagram"
           name="instagram"
           placeholder="@yourhandle"
+          value={instagram}
+          onChange={(e) => setInstagram(e.target.value)}
           className={authInputClass}
         />
       </div>
 
       <label className="flex cursor-pointer items-start gap-2.5 text-[13px] font-semibold leading-relaxed text-white/55">
         <input
+          key={`agree-${formNonce}`}
           type="checkbox"
           name="agree"
           checked={agreed}
