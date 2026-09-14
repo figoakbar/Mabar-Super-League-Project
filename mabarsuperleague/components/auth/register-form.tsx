@@ -243,13 +243,23 @@ export function RegisterForm() {
         />
         <span>
           I agree to the{" "}
-          <Link href="#" className="font-bold text-[#FFC833] hover:underline">
+          <a
+            href="/docs/terms.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-[#FFC833] hover:underline"
+          >
             Terms
-          </Link>{" "}
+          </a>{" "}
           and{" "}
-          <Link href="#" className="font-bold text-[#FFC833] hover:underline">
+          <a
+            href="/docs/privacy.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-[#FFC833] hover:underline"
+          >
             Privacy Policy
-          </Link>{" "}
+          </a>{" "}
           of Indonesia Arcadia Gaming League.
         </span>
       </label>
