@@ -66,12 +66,6 @@ export default async function LoginPage({
             Indonesia Arcadia Gaming League
           </span>
         </Link>
-        <Link
-          href="/how-to-play"
-          className="text-sm font-bold text-white/55 hover:text-white/80"
-        >
-          Need help?
-        </Link>
       </div>
 
       {/* Konten utama */}
