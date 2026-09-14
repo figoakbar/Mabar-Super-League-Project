@@ -67,7 +67,7 @@ export default async function LoginPage({
           </span>
         </Link>
         <Link
-          href="#"
+          href="/how-to-play"
           className="text-sm font-bold text-white/55 hover:text-white/80"
         >
           Need help?

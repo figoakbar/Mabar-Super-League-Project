@@ -11,18 +11,26 @@ import { LOGIN_PATH, SESSION_COOKIE } from "@/lib/auth/constants";
 // admin?" — lives in the admin layout via lib/auth/dal.ts, close to the data, as
 // the Next.js authentication guide recommends.
 
-/** Reachable without a session. reset-password is here: the user is locked out. */
-const publicRoutes = [
+/** Auth screens: reachable without a session, and a signed-in visitor is sent
+ *  home instead. reset-password is here: the user is locked out. */
+const authRoutes = [
   "/login",
   "/register",
   "/forgot-password",
   "/reset-password",
 ];
 
+/** Open to everyone, signed in or not — the guide a prospective player reads
+ *  before they have an account, and the target of "Need help?". */
+const openRoutes = ["/how-to-play"];
+
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isLoggedIn = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const isPublicRoute = authRoutes.includes(pathname);
+
+  // Open to all — never redirected in either direction.
+  if (openRoutes.includes(pathname)) return NextResponse.next();
 
   // Guest visiting a protected page → send to login, remembering the target.
   if (!isLoggedIn && !isPublicRoute) {
