@@ -1,0 +1,175 @@
+// Dev uses SQLite for zero-setup local runs. To move to Postgres, change
+// `provider` to "postgresql" and point DATABASE_URL at your Postgres instance —
+// the models below are portable as-is.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A registered account. `passwordHash` is null for Google-only sign-ups.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String?
+  role         String   @default("user") // user | admin
+  phone        String   @default("")
+  consoleId    String   @default("")
+  pcId         String   @default("")
+  instagram    String   @default("")
+  googleId     String?  @unique
+  avatarUrl    String   @default("")
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions      Session[]
+  resetTokens   PasswordResetToken[]
+}
+
+/// Opaque server-side session. Only the SHA-256 hash of the token is stored,
+/// so a database leak cannot be replayed as a login.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String   @default("")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
+}
+
+/// Single-use password reset token (hash only, short lived).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
+}
+
+model Tournament {
+  id                   String   @id @default(cuid())
+  name                 String
+  game                 String
+  // Comma-separated list of supported platforms, e.g. "PS5, Xbox Series X|S, PC".
+  platforms            String   @default("")
+  description          String   @default("")
+  status               String   @default("open") // open | ongoing | completed
+  // knockout | group_knockout | racing — drives how the bracket is displayed
+  format               String   @default("knockout")
+  // minor | major | championship — weights the season points a result awards
+  tier                 String   @default("minor")
+  prizePool            Int      @default(0)
+  entryFee             Int      @default(0)
+  maxTeams             Int      @default(16)
+  startDate            String   @default("")
+  registrationDeadline String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // The season this tournament's results count toward. Nullable so the league
+  // can be dormant (no active season) and so existing rows migrate cleanly.
+  season               Season?  @relation(fields: [seasonId], references: [id])
+  seasonId             String?
+
+  participants Participant[]
+  matches      Match[]
+  raceResults  RaceResult[]
+  schedule     ScheduleItem[]
+
+  @@index([seasonId])
+}
+
+/// A competitive season. Started and closed manually by an admin (not tied to
+/// the calendar). Tournaments belong to a season; the leaderboard buckets its
+/// points by season. Invariant, enforced in the service: at most one `active`.
+model Season {
+  id        String    @id @default(cuid())
+  name      String
+  status    String    @default("active") // active | closed
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tournaments Tournament[]
+  champions   SeasonChampion[]
+}
+
+/// Frozen record of who topped a season, captured when the season is closed.
+/// One row per game plus one overall (game = ""). Powers the Hall of Fame.
+model SeasonChampion {
+  id        String   @id @default(cuid())
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonId  String
+  game      String   @default("") // "" = overall champion; otherwise per-game
+  username  String
+  points    Int
+  createdAt DateTime @default(now())
+
+  @@index([seasonId])
+}
+
+/// Timeline entries an admin sets per tournament (bracket draw, round dates,
+/// finals…). Rendered on the public tournament page's Schedule panel.
+model ScheduleItem {
+  id           String     @id @default(cuid())
+  label        String
+  date         String     @default("") // yyyy-mm-dd
+  time         String     @default("") // free text, e.g. "19:00 WIB"
+  position     Int        @default(0) // display order
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+/// Results for racing-format tournaments: one row per driver per session.
+model RaceResult {
+  id           String     @id @default(cuid())
+  session      String // practice | qualifying | race
+  driver       String
+  position     Int?
+  lapTime      String     @default("") // e.g. 1:32.451
+  notes        String     @default("")
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+model Participant {
+  id           String     @id @default(cuid())
+  team         String
+  captain      String     @default("")
+  contact      String     @default("")
+  status       String     @default("pending") // pending | confirmed | rejected
+  receiptUrl   String? // uploaded payment proof, e.g. /uploads/abc.jpg
+  reviewedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}
+
+model Match {
+  id           String     @id @default(cuid())
+  round        String     @default("")
+  teamA        String
+  teamB        String
+  scoreA       Int?
+  scoreB       Int?
+  status       String     @default("scheduled") // scheduled | completed
+  playedAt     String     @default("")
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+}

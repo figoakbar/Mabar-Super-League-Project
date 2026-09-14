@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PasswordField } from "@/components/auth/password-field";
-import { login } from "@/lib/auth/actions";
+import { LoginForm } from "@/components/auth/login-form";
+import { IaglMark } from "@/components/shared/iagl-mark";
 
 export const metadata: Metadata = {
   title: "Log in",
@@ -21,14 +21,27 @@ function RatingPill({ rating }: { rating: string }) {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string; reset?: string; error?: string }>;
+}) {
+  const { next, reset, error } = await searchParams;
+
   return (
-    <main className="relative h-screen min-h-[720px] overflow-hidden bg-[#0C0C10] font-nunito">
-      {/* Grid latar */}
+    <main className="relative min-h-screen overflow-x-hidden bg-[#0C0C10] font-nunito">
+      {/* Dekorasi latar — fixed & ter-clip ke viewport, jadi tak pernah menambah
+          scroll atau memotong form ketika kontennya lebih tinggi dari layar
+          (mis. saat pesan error muncul). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_90%_80%_at_50%_40%,black_40%,transparent_100%)]"
-      />
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
+        {/* Grid latar */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_90%_80%_at_50%_40%,black_40%,transparent_100%)]"
+        />
 
       {/* Ornamen mengambang */}
       <div
@@ -43,27 +56,20 @@ export default function LoginPage() {
         aria-hidden
         className="absolute right-[16%] top-[48%] size-3 rounded-full bg-[#FF8A80] opacity-45 [animation:float_3.4s_ease-in-out_infinite] [animation-delay:2s]"
       />
+      </div>
 
       {/* Bar atas */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-[22px] sm:px-10">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid size-[34px] place-items-center rounded-[10px] bg-gradient-to-br from-[#FFC24B] to-[#F2803B]">
-            <span className="size-3 rounded-[4px] bg-[#1A1108]" />
-          </span>
+          <IaglMark className="size-[36px]" />
           <span className="font-baloo text-[19px] font-extrabold tracking-[0.3px] text-white">
-            Mabar Super League
+            Indonesia Arcadia Gaming League
           </span>
-        </Link>
-        <Link
-          href="#"
-          className="text-sm font-bold text-white/55 hover:text-white/80"
-        >
-          Need help?
         </Link>
       </div>
 
       {/* Konten utama */}
-      <div className="relative z-10 flex flex-col items-center gap-4 px-4 pt-[86px]">
+      <div className="relative z-10 flex flex-col items-center gap-4 px-4 pb-16 pt-[86px]">
         <div className="flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] px-4 py-[7px] text-[13px]">
           <span className="font-extrabold text-[#FFB800]">★</span>
           <span className="font-extrabold text-white">New Season</span>
@@ -79,76 +85,31 @@ export default function LoginPage() {
           already waiting below!
         </p>
 
-        {/* Kartu login */}
-        <form
-          action={login}
-          className="mt-2.5 flex w-full max-w-[380px] flex-col gap-3.5 rounded-3xl border border-white/[0.09] bg-[#15151b]/90 p-7 pb-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
-        >
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="email"
-              className="text-[12.5px] font-extrabold tracking-[0.4px] text-white/65"
-            >
-              EMAIL
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@email.com"
-              required
-              className="w-full rounded-xl border border-white/[0.12] bg-[#101015] px-3.5 py-3 text-[14.5px] font-semibold text-white outline-none placeholder:text-white/30 focus:border-[#FFC833]/70"
-            />
-          </div>
-
-          <PasswordField />
-
-          <div className="mt-0.5 flex items-center justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-white/55">
-              <input
-                type="checkbox"
-                name="remember"
-                className="size-[15px] accent-[#FFB800]"
-              />
-              Remember me
-            </label>
-            <Link
-              href="#"
-              className="text-[13px] font-bold text-[#FFC833] hover:text-[#FFDD66] hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-1.5 w-full cursor-pointer rounded-[14px] bg-[#FFB800] p-3.5 font-baloo text-[16.5px] font-extrabold text-[#1A1108] transition hover:-translate-y-px hover:brightness-110 active:translate-y-px"
-          >
-            Log In Now
-          </button>
-
-          <div className="text-center text-[13.5px] font-semibold text-white/50">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              className="text-[#FFC833] hover:text-[#FFDD66] hover:underline"
-            >
-              Sign up free
-            </Link>
-          </div>
-        </form>
+        <LoginForm
+          next={next}
+          errorCode={error}
+          notice={
+            reset
+              ? "Password updated. Log in with your new password."
+              : undefined
+          }
+        />
       </div>
 
-      {/* Kipas kartu karakter */}
+      {/* Kipas kartu + gradasi — backdrop bawah, fixed & ter-clip ke viewport. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
       <div className="absolute bottom-[-130px] left-1/2 z-[5] h-[430px] w-[1240px] -translate-x-1/2 scale-[0.55] max-lg:origin-bottom sm:scale-75 lg:scale-100">
-        {/* 1. Sepak Bola — ungu */}
+        {/* 1. Play — ungu */}
         <div className="absolute bottom-0 left-0 z-[1] h-[360px] w-[300px] origin-bottom -rotate-[16deg] rounded-[26px] bg-gradient-to-br from-[#8E7BFF] to-[#5B3FD4] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,5" />
           <div className="pr-[68px] font-baloo text-[26px] font-extrabold text-white">
-            Football
+            Play
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Fantasy League
+            Just for Fun
           </div>
           <div className="absolute bottom-[130px] left-1/2 -ml-[55px] h-40 w-[110px]">
             <div className="absolute bottom-0 left-1/2 -ml-[38px] h-3.5 w-[76px] rounded-full bg-black/35 [animation:shadow-squash_1.5s_ease-in-out_infinite]" />
@@ -179,14 +140,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* 2. Tenis — merah */}
+        {/* 2. Compete — merah */}
         <div className="absolute bottom-11 left-[235px] z-[2] h-[370px] w-[300px] origin-bottom -rotate-[8deg] rounded-[26px] bg-gradient-to-br from-[#FF8A80] to-[#E5484D] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,8" />
           <div className="font-baloo text-[26px] font-extrabold text-white">
-            Tennis
+            Compete
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Smash Court
+            Friendly Rivalry
           </div>
           <div className="absolute bottom-28 left-1/2 -ml-[75px] h-[140px] w-[150px] [animation:float_3.4s_ease-in-out_infinite] [animation-delay:1.3s]">
             <span className="absolute left-[18px] top-1.5 size-2.5 rounded-[2px] bg-[#FFF0B8] [animation:confetti_2.4s_ease-in-out_infinite]" />
@@ -245,13 +206,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* 4. Motorsport — hijau */}
+        {/* 4. Challenge — hijau */}
         <div className="absolute bottom-11 right-[235px] z-[2] h-[370px] w-[300px] origin-bottom rotate-[8deg] rounded-[26px] bg-gradient-to-br from-[#7EE8A2] to-[#2FA96E] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="4,2" />
           <div className="pr-[68px] font-baloo text-[26px] font-extrabold text-white">
-            Motorsport
+            Challenge
           </div>
-          <div className="text-[13px] font-bold text-white/65">Grand Prix</div>
+          <div className="text-[13px] font-bold text-white/65">Bring Your Best</div>
           <div className="absolute bottom-24 left-1/2 -ml-[60px] h-[170px] w-[120px]">
             <span className="absolute left-2.5 top-0 h-[26px] w-1 rounded-sm bg-white/60 [animation:speedline_1.1s_linear_infinite]" />
             <span className="absolute right-2.5 top-0 h-[34px] w-1 rounded-sm bg-white/50 [animation:speedline_1.1s_linear_infinite] [animation-delay:0.4s]" />
@@ -272,14 +233,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* 5. Gaming — oranye */}
+        {/* 5. Glory — oranye */}
         <div className="absolute bottom-0 right-0 z-[1] h-[360px] w-[300px] origin-bottom rotate-[16deg] rounded-[26px] bg-gradient-to-br from-[#FFC46B] to-[#F2803B] p-[22px] shadow-[0_24px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-5">
           <RatingPill rating="3,9" />
           <div className="font-baloo text-[26px] font-extrabold text-white">
-            Gaming
+            Glory
           </div>
           <div className="text-[13px] font-bold text-white/65">
-            Arcade Mania
+            Bragging Rights
           </div>
           <div className="absolute bottom-40 left-1/2 -ml-[60px] h-[90px] w-[120px] [animation:wobble_2.6s_ease-in-out_infinite]">
             <span className="absolute left-0 top-3.5 h-[60px] w-[120px] rounded-[30px] bg-[#2E2A3E] shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)]" />
@@ -302,6 +263,7 @@ export default function LoginPage() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[90px] bg-gradient-to-b from-transparent to-[#060609]/90"
       />
+      </div>
     </main>
   );
 }

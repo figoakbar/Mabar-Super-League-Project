@@ -18,7 +18,7 @@ const steps = [
     iconBg: "rgba(79,163,224,0.1)",
     delay: "0s",
     title: "Create your account",
-    text: "Sign up free with your email, choose a username, and complete your player profile.",
+    text: "Sign up free with your email and a username, then add your gamer IDs (PSN, Xbox, Steam, Epic or Riot) so opponents can find you.",
   },
   {
     n: "02",
@@ -28,7 +28,7 @@ const steps = [
     iconBg: "rgba(142,123,255,0.1)",
     delay: "0.4s",
     title: "Pick a tournament",
-    text: "Browse open tournaments, check the format, schedule, and entry fee, then hit register before slots run out.",
+    text: "Browse open tournaments — check the game, platforms, format, tier and entry fee — then register before registration closes.",
   },
   {
     n: "03",
@@ -55,53 +55,96 @@ const steps = [
 const flow = [
   {
     n: "1",
-    title: "Join the Discord & check in",
-    text: "All match coordination happens on the official Discord. Check in 30 minutes before every scheduled match — missing check-in counts as a forfeit.",
+    title: "Wait for the draw",
+    text: "Once registration closes, the groups or bracket are drawn from the confirmed players. Your matchups then appear on the tournament page.",
     dotBg: "rgba(255,184,0,0.12)",
     dotBorder: "rgba(255,184,0,0.4)",
     dotColor: "#FFB800",
   },
   {
     n: "2",
-    title: "Play your group stage matches",
-    text: "Follow your matchday schedule on the tournament page. Wins earn 3 points; the top 2 of each group advance to the knockout stage.",
+    title: "Play your matches",
+    text: "Follow the schedule on the tournament page. Group & Knockout events run a round-robin group stage first, and the top finishers of each group advance to the knockout.",
     dotBg: "rgba(255,255,255,0.05)",
     dotBorder: "rgba(255,255,255,0.15)",
     dotColor: "rgba(255,255,255,0.6)",
   },
   {
     n: "3",
-    title: "Report every result",
-    text: "Screenshot the final score screen and post it in the results channel within 15 minutes. Brackets and standings update automatically once both players confirm.",
+    title: "Report your result to an admin",
+    text: "After each match, send an admin your result — a screenshot, the final score, and who won. The admin records it, and the bracket, standings and your player record then update automatically.",
     dotBg: "rgba(255,255,255,0.05)",
     dotBorder: "rgba(255,255,255,0.15)",
     dotColor: "rgba(255,255,255,0.6)",
   },
   {
     n: "4",
-    title: "Survive the knockout stage",
-    text: "Single elimination from quarterfinals onward — lose and you're out. Finals are best of 3, streamed live on the MSL channel.",
+    title: "Advance through the knockout",
+    text: "The knockout stage is single elimination — win and you move on, lose and you're out, all the way to the final.",
     dotBg: "rgba(255,255,255,0.05)",
     dotBorder: "rgba(255,255,255,0.15)",
     dotColor: "rgba(255,255,255,0.6)",
   },
   {
     n: "5",
-    title: "Win prizes & climb the leaderboard",
-    text: "Champions take the prize pool and a profile badge. Every match also earns season points toward the global leaderboard.",
+    title: "Earn prizes & season points",
+    text: "Champions take the prize pool. Every result also earns season points based on how far you place — climb the seasonal leaderboard and your player profile.",
     dotBg: "rgba(111,207,151,0.12)",
     dotBorder: "rgba(111,207,151,0.4)",
     dotColor: "#6FCF97",
   },
 ];
 
+// Base points per placement — the leaderboard multiplies these by the
+// tournament tier (Minor ×1 · Major ×2 · Championship ×3) and bracket size.
 const points = [
-  { label: "Champion", pts: "+500", color: "#FFB800" },
-  { label: "Runner-up", pts: "+300", color: "#C7CEDC" },
-  { label: "Semifinalist", pts: "+180", color: "#D98E52" },
-  { label: "Quarterfinalist", pts: "+100", color: "rgba(255,255,255,0.7)" },
-  { label: "Group stage win", pts: "+25", color: "rgba(255,255,255,0.7)" },
-  { label: "Match played", pts: "+10", color: "rgba(255,255,255,0.7)" },
+  { label: "Champion", pts: "100", color: "#FFB800" },
+  { label: "Runner-up", pts: "60", color: "#C7CEDC" },
+  { label: "Semifinalist", pts: "35", color: "#D98E52" },
+  { label: "Quarterfinalist", pts: "20", color: "rgba(255,255,255,0.7)" },
+  { label: "Round of 16", pts: "12", color: "rgba(255,255,255,0.7)" },
+  { label: "Group stage / early exit", pts: "8", color: "rgba(255,255,255,0.7)" },
+];
+
+// The four tournament tiers. The multiplier scales every placement's points;
+// `champ` is what a champion of a base 8-player bracket earns (100 × weight).
+const tiers = [
+  {
+    name: "Minor",
+    badge: "×1 POINTS",
+    desc: "Everyday and weekly tournaments. Points count at their base value — the easiest way to start climbing the ladder.",
+    champ: "100 pts",
+    accent: "#4FA3E0",
+    accentBorder: "rgba(79,163,224,0.45)",
+    iconBg: "rgba(79,163,224,0.1)",
+  },
+  {
+    name: "Major",
+    badge: "×2 POINTS",
+    desc: "Bigger, higher-stakes events. Every placement is worth double the season points of a Minor.",
+    champ: "200 pts",
+    accent: "#8E7BFF",
+    accentBorder: "rgba(142,123,255,0.45)",
+    iconBg: "rgba(142,123,255,0.1)",
+  },
+  {
+    name: "Championship",
+    badge: "×3 POINTS",
+    desc: "The flagship, season-defining tournaments. Points count triple — this is where champions are made.",
+    champ: "300 pts",
+    accent: "#FFB800",
+    accentBorder: "rgba(255,184,0,0.45)",
+    iconBg: "rgba(255,184,0,0.1)",
+  },
+  {
+    name: "Exhibition",
+    badge: "NO POINTS",
+    desc: "Casual, just-for-fun matchups. They award no season points and don't affect the leaderboard at all.",
+    champ: "0 pts",
+    accent: "rgba(255,255,255,0.45)",
+    accentBorder: "rgba(255,255,255,0.15)",
+    iconBg: "rgba(255,255,255,0.04)",
+  },
 ];
 
 function StepIcon({ icon, accent }: { icon: string; accent: string }) {
@@ -188,12 +231,27 @@ export default function HowToPlayPage() {
             </h1>
             <p className="max-w-[520px] text-[15px] font-semibold leading-[1.65] text-white/55">
               From sign-up to lifting the trophy — here&apos;s everything you
-              need to join your first MSL tournament.
+              need to join your first IAGL tournament.
             </p>
           </div>
         </section>
 
         <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-12 px-6 pb-20 pt-11 sm:px-10">
+          {/* Spirit of IAGL — friendly, for fun, not cut-throat */}
+          <div className="flex items-start gap-3.5 rounded-xl border border-[#FFB800]/25 bg-[#FFB800]/[0.06] px-5 py-4">
+            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-[#FFB800]/15 font-display text-sm font-extrabold text-[#FFB800]">
+              ★
+            </span>
+            <p className="text-[14px] font-semibold leading-[1.65] text-white/65">
+              <span className="font-extrabold text-[#FFB800]">
+                Play for fun and respect.
+              </span>{" "}
+              IAGL tournaments are friendly — they&apos;re about enjoying the game
+              together, not serious competition. Play your best, be a good sport,
+              and treat your opponents well.
+            </p>
+          </div>
+
           {/* Steps */}
           <section className="flex flex-col gap-5">
             <h2 className="font-display text-2xl font-extrabold text-white">
@@ -276,6 +334,100 @@ export default function HowToPlayPage() {
             </div>
           </section>
 
+          {/* Tournament tiers */}
+          <section className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <h2 className="font-display text-2xl font-extrabold text-white">
+                Tournament tiers &amp; points
+              </h2>
+              <p className="max-w-[680px] text-[13.5px] font-semibold leading-[1.65] text-white/55">
+                Every tournament has a tier that decides how much its season
+                points are worth. The further you place, the more you earn — and
+                a higher tier multiplies all of it.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+              {tiers.map((t) => (
+                <div
+                  key={t.name}
+                  className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#101114] p-5"
+                >
+                  <div
+                    className="absolute inset-x-0 top-0 h-[3px]"
+                    style={{ background: t.accent }}
+                  />
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="font-display text-[17px] font-extrabold text-white">
+                      {t.name}
+                    </span>
+                    <span
+                      className="rounded-full border px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.5px]"
+                      style={{
+                        borderColor: t.accentBorder,
+                        background: t.iconBg,
+                        color: t.accent,
+                      }}
+                    >
+                      {t.badge}
+                    </span>
+                  </div>
+                  <p className="text-[13px] font-semibold leading-[1.6] text-white/55">
+                    {t.desc}
+                  </p>
+                  <div className="mt-auto flex items-center justify-between border-t border-white/[0.06] pt-3">
+                    <span className="text-[10.5px] font-bold uppercase tracking-[0.5px] text-white/35">
+                      Champion earns
+                    </span>
+                    <span
+                      className="font-display text-[15px] font-extrabold"
+                      style={{ color: t.accent }}
+                    >
+                      {t.champ}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-xl border border-white/[0.08] bg-[#101114] px-6 py-5">
+              <span className="font-display text-[15px] font-extrabold text-white">
+                How your points add up
+              </span>
+              <p className="text-[13.5px] font-semibold leading-[1.7] text-white/55">
+                Season points ={" "}
+                <span className="font-extrabold text-white/80">
+                  base placement points
+                </span>{" "}
+                ×{" "}
+                <span className="font-extrabold text-white/80">tier</span> ×{" "}
+                <span className="font-extrabold text-white/80">
+                  bracket-size bonus
+                </span>
+                . The bonus grows with the number of players, up to double for a
+                full 32-player bracket — so a bigger, tougher field is worth more.
+                The champion figures above assume an 8-player bracket.
+              </p>
+              <div className="mt-1 flex flex-col gap-1.5 text-[13px] font-semibold text-white/55">
+                <span>
+                  <span className="text-[#4FA3E0]">•</span> Win a Minor (8
+                  players) → 100 × 1 × 1 ={" "}
+                  <span className="font-extrabold text-white/80">100 pts</span>
+                </span>
+                <span>
+                  <span className="text-[#8E7BFF]">•</span> Win a Major (16
+                  players) → 100 × 2 × 1.4 ≈{" "}
+                  <span className="font-extrabold text-white/80">283 pts</span>
+                </span>
+                <span>
+                  <span className="text-[#FFB800]">•</span> Win a Championship
+                  (32 players) → 100 × 3 × 2 ={" "}
+                  <span className="font-extrabold text-white/80">600 pts</span>
+                </span>
+              </div>
+            </div>
+          </section>
+
           {/* FAQ + points */}
           <section className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="flex flex-col gap-4">
@@ -287,7 +439,7 @@ export default function HowToPlayPage() {
 
             <div className="flex flex-col gap-4">
               <h2 className="font-display text-2xl font-extrabold text-white">
-                Season points
+                Placement points
               </h2>
               <div className="flex flex-col rounded-xl border border-white/[0.08] bg-[#101114] px-6 py-5">
                 {points.map((p) => (
@@ -306,8 +458,10 @@ export default function HowToPlayPage() {
                     </span>
                   </div>
                 ))}
-                <span className="pt-3 text-xs font-bold text-white/35">
-                  Points accumulate on the{" "}
+                <span className="pt-3 text-xs font-bold leading-[1.6] text-white/35">
+                  Base points for each placement — then multiplied by the
+                  tournament&apos;s tier and bracket size (see above). Totals
+                  accumulate on the{" "}
                   <Link
                     href="/leaderboard"
                     className="text-[#FFB800] hover:text-[#FFDD66] hover:underline"
@@ -323,7 +477,7 @@ export default function HowToPlayPage() {
                   Ready to compete?
                 </span>
                 <span className="text-[13px] font-semibold leading-[1.6] text-white/60">
-                  Registration for Season 5 tournaments is open now.
+                  Registration for this season&apos;s tournaments is open now.
                 </span>
                 <Link
                   href="/tournaments"

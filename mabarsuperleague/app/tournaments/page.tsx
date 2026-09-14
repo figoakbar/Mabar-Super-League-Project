@@ -3,23 +3,13 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
-import {
-  TournamentBrowser,
-  type OpenTournament,
-} from "@/components/tournaments/tournament-browser";
+import { ScrollLink } from "@/components/shared/scroll-link";
+import { TournamentBrowser } from "@/components/tournaments/tournament-browser";
+import { getCurrentUser } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
   title: "Tournaments",
 };
-
-const data: OpenTournament[] = [
-  { id: "fc5", cat: "Football", gameLabel: "EA FC", name: "MSL Championship S5 — Late Qualifier", format: "Online · Single Elimination", accent: "#4FA3E0", prize: "Rp 5.000.000", fee: "Rp 50.000", regEnds: "22 Jul 2026", filled: 26, slots: 32 },
-  { id: "gp26", cat: "Racing", gameLabel: "GRAND PRIX", name: "Grand Prix Series — Sprint Cup", format: "Online · Time Trial + Race", accent: "#4FBF8B", prize: "Rp 3.500.000", fee: "Rp 35.000", regEnds: "24 Jul 2026", filled: 14, slots: 24 },
-  { id: "sc26", cat: "Tennis", gameLabel: "SMASH COURT", name: "Smash Court Open — August Edition", format: "Online · Round Robin + Knockout", accent: "#E06055", prize: "Rp 2.000.000", fee: "Rp 25.000", regEnds: "30 Jul 2026", filled: 9, slots: 16 },
-  { id: "am26", cat: "Arcade", gameLabel: "ARCADE MANIA", name: "Arcade Clash Cup — Score Attack", format: "Online · Weekly Leaderboard", accent: "#E0A04F", prize: "Rp 1.500.000", fee: "Free", regEnds: "19 Jul 2026", filled: 48, slots: 64 },
-  { id: "tb26", cat: "Football", gameLabel: "TURBO BALL", name: "Turbo Ball Community League S2", format: "Online · League + Playoffs", accent: "#D9479A", prize: "Rp 2.500.000", fee: "Rp 30.000", regEnds: "29 Jul 2026", filled: 16, slots: 16 },
-  { id: "fl26", cat: "Football", gameLabel: "FANTASY LEAGUE", name: "Fantasy League Cup — Season 4", format: "Online · Swiss Rounds", accent: "#8E7BFF", prize: "Rp 4.000.000", fee: "Rp 40.000", regEnds: "26 Jul 2026", filled: 21, slots: 32 },
-];
 
 const star8 =
   "polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)";
@@ -118,8 +108,9 @@ function HeroArt() {
   );
 }
 
-export default function TournamentsPage() {
-  const openCount = data.filter((t) => t.filled < t.slots).length;
+export default async function TournamentsPage() {
+  const user = await getCurrentUser();
+  const username = user?.username ?? "Player";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0A0B0D] font-body text-white">
@@ -140,48 +131,22 @@ export default function TournamentsPage() {
                 Become a <span className="text-[#FFB800]">Champion</span>.
               </h1>
               <p className="max-w-[460px] text-[15.5px] font-semibold leading-[1.65] text-white/55">
-                Join official MSL tournaments across football, racing, tennis,
-                and arcade games. Registration takes less than a minute.
+                Pick a game, bring your friends, and jump in — it&apos;s all
+                for fun. Signing up takes less than a minute.
               </p>
               <div className="mt-1.5 flex flex-wrap gap-3">
-                <Link
-                  href="#open-tournaments"
-                  className="rounded-xl bg-[#FFB800] px-[26px] py-[13px] font-display text-[15px] font-extrabold text-[#0A0B0D] transition hover:brightness-110"
+                <ScrollLink
+                  targetId="open-tournaments"
+                  className="cursor-pointer rounded-xl bg-[#FFB800] px-[26px] py-[13px] font-display text-[15px] font-extrabold text-[#0A0B0D] transition hover:brightness-110"
                 >
                   Browse Tournaments
-                </Link>
+                </ScrollLink>
                 <Link
-                  href="#"
+                  href="/how-to-play"
                   className="rounded-xl border border-white/[0.16] px-[26px] py-[13px] font-display text-[15px] font-bold text-white transition-colors hover:bg-white/[0.06]"
                 >
                   How it works
                 </Link>
-              </div>
-              <div className="mt-2.5 flex gap-7">
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-white">
-                    2,340
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    PLAYERS
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-white">
-                    {openCount} events
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    OPEN NOW
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-2xl font-extrabold leading-[1.2] text-[#FFB800]">
-                    Rp 18.5M
-                  </span>
-                  <span className="text-[11.5px] font-bold tracking-[1px] text-white/40">
-                    TOTAL PRIZES
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -194,7 +159,7 @@ export default function TournamentsPage() {
           id="open-tournaments"
           className="mx-auto w-full max-w-[1240px] px-6 pb-20 pt-12 sm:px-10"
         >
-          <TournamentBrowser data={data} />
+          <TournamentBrowser username={username} />
         </section>
       </main>
 

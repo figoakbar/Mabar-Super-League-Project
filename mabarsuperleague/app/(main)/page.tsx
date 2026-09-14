@@ -1,244 +1,244 @@
-import Link from "next/link";
+import type { ReactNode } from "react";
 
-import {
-  RecordsSlider,
-  type GameRecord,
-} from "@/components/home/records-slider";
-import {
-  TournamentTabs,
-  type TournamentEntry,
-} from "@/components/home/tournament-tabs";
-import { getSession } from "@/lib/auth/session";
+import { TournamentTabs } from "@/components/home/tournament-tabs";
+import { Avatar } from "@/components/shared/user-menu";
+import { api, API_ORIGIN } from "@/lib/admin/api";
+import { requireUser } from "@/lib/auth/dal";
+import { accentFor, avatarSrc } from "@/lib/data/tournament-view";
 
-const games: GameRecord[] = [
-  { name: "EA FC", sub: "Rivals Division", w: 10, l: 5, rate: 67, accent: "#4FA3E0" },
-  { name: "Fantasy League", sub: "Football", w: 14, l: 8, rate: 64, accent: "#8E7BFF" },
-  { name: "Smash Court", sub: "Tennis", w: 7, l: 9, rate: 44, accent: "#E06055" },
-  { name: "Grand Prix", sub: "Motorsport", w: 12, l: 3, rate: 80, accent: "#4FBF8B" },
-  { name: "Arcade Mania", sub: "Gaming", w: 21, l: 12, rate: 64, accent: "#E0A04F" },
-  { name: "Turbo Ball", sub: "3v3 Arena", w: 6, l: 6, rate: 50, accent: "#D9479A" },
-];
-
-const confirmed = {
-  status: "Confirmed",
-  statusBg: "rgba(111,207,151,0.12)",
-  statusColor: "#6FCF97",
-};
-const pending = {
-  status: "Pending",
-  statusBg: "rgba(255,184,0,0.12)",
-  statusColor: "#FFB800",
-};
-
-const ongoing: TournamentEntry[] = [
-  {
-    tag: "FC",
-    accent: "#4FA3E0",
-    gameLabel: "EA FC",
-    name: "MSL Championship S5",
-    ...confirmed,
-    stage: "GROUP STAGE · GROUP A",
-    recordVal: "2–0",
-    recordRest: "Rank 1 of 4",
-  },
-  {
-    tag: "GP",
-    accent: "#4FBF8B",
-    gameLabel: "GRAND PRIX",
-    name: "Grand Prix Series 2026",
-    ...confirmed,
-    stage: "QUALIFYING · ROUND 2",
-    recordVal: "3–1",
-    recordRest: "Top 8",
-  },
-  {
-    tag: "AM",
-    accent: "#E0A04F",
-    gameLabel: "ARCADE MANIA",
-    name: "Arcade Clash Cup",
-    ...pending,
-    note: "Payment proof under review — slot confirmed after verification.",
-  },
-];
-
-const past: TournamentEntry[] = [
-  {
-    tag: "FC",
-    accent: "#4FA3E0",
-    gameLabel: "EA FC",
-    name: "MSL Championship S4",
-    status: "Champion",
-    statusBg: "rgba(255,184,0,0.12)",
-    statusColor: "#FFB800",
-    stage: "KNOCKOUT · FINAL",
-    recordVal: "6–1",
-    recordRest: "1st of 32",
-  },
-  {
-    tag: "TB",
-    accent: "#D9479A",
-    gameLabel: "TURBO BALL",
-    name: "Community League 2025",
-    status: "Runner-up",
-    statusBg: "rgba(199,206,220,0.1)",
-    statusColor: "#C7CEDC",
-    stage: "KNOCKOUT · FINAL",
-    recordVal: "4–2",
-    recordRest: "2nd of 16",
-  },
-  {
-    tag: "SC",
-    accent: "#E06055",
-    gameLabel: "SMASH COURT",
-    name: "Tennis Open Cup",
-    status: "Semifinal",
-    statusBg: "rgba(255,255,255,0.08)",
-    statusColor: "rgba(255,255,255,0.6)",
-    stage: "KNOCKOUT · SEMIFINAL",
-    recordVal: "3–2",
-    recordRest: "Top 4",
-  },
-];
-
-const matches = [
-  { res: "W", opponent: "DimasFC_99", sub: "MSL Championship S5 · Matchday 2", score: "3–1", date: "12 Jul" },
-  { res: "W", opponent: "SpeedKing_ID", sub: "Grand Prix Series · Qualifying R2", score: "P1", date: "10 Jul" },
-  { res: "L", opponent: "AceHunter", sub: "Tennis Open Cup · Group", score: "1–2", date: "8 Jul" },
-  { res: "W", opponent: "PixelQueen", sub: "Arcade Clash Cup · Round 1", score: "48,200 pts", date: "6 Jul" },
-  { res: "L", opponent: "GoalMachine", sub: "MSL Championship S5 · Matchday 1", score: "2–3", date: "3 Jul" },
-  { res: "W", opponent: "CaptainStrike", sub: "Fantasy League · Week 12", score: "2–0", date: "1 Jul" },
-];
-
-const totalW = games.reduce((a, g) => a + g.w, 0);
-const totalL = games.reduce((a, g) => a + g.l, 0);
-
-function MatchBadge({ res, size = "md" }: { res: string; size?: "sm" | "md" }) {
-  const win = res === "W";
+// Shown when a section genuinely has nothing to display yet.
+function EmptyCard({ children }: { children: ReactNode }) {
   return (
-    <span
-      className={`grid place-items-center font-extrabold ${
-        size === "sm"
-          ? "size-5 rounded-[4px] text-[10px]"
-          : "size-8 rounded-md text-[13px]"
-      }`}
-      style={{
-        background: win ? "rgba(111,207,151,0.14)" : "rgba(224,122,114,0.14)",
-        color: win ? "#6FCF97" : "#E07A72",
-      }}
-    >
-      {res}
-    </span>
+    <div className="rounded-[10px] border border-dashed border-white/[0.14] bg-[#101114] px-5 py-10 text-center text-sm font-semibold text-white/40">
+      {children}
+    </div>
   );
 }
 
+type MatchRow = {
+  id: string;
+  opponent: string;
+  won: boolean;
+  score: string;
+  tournament: string;
+  round: string;
+};
+
 export default async function HomePage() {
-  const session = await getSession();
-  const username = session?.username ?? "Player";
+  // The dashboard is personal, so an invalid session is cleared rather than
+  // silently rendered as an anonymous "Player".
+  const user = await requireUser("/");
+  const username = user.username;
   const initials = username.slice(0, 2).toUpperCase();
+  const photo = avatarSrc(user.avatarUrl, API_ORIGIN);
+
+  // Real career stats: the same figures the public Players directory shows,
+  // plus this player's own completed matches for the history list.
+  let wins = 0;
+  let losses = 0;
+  let trophies = 0;
+  let records: { game: string; w: number; l: number; points: number }[] = [];
+  const gameCounts: Record<string, number> = {};
+  let history: MatchRow[] = [];
+  try {
+    const [players, matches] = await Promise.all([
+      api.listPlayers(),
+      api.listMatches(),
+    ]);
+    const me = players.find((p) => p.username === username);
+    if (me) {
+      wins = me.wins;
+      losses = me.losses;
+      trophies = me.trophies;
+      records = me.records;
+      // How many tournaments this player has joined, per game.
+      for (const t of me.tournaments) {
+        gameCounts[t.game] = (gameCounts[t.game] ?? 0) + 1;
+      }
+    }
+    history = matches
+      .filter(
+        (m) =>
+          m.status === "completed" &&
+          m.tournament?.tier !== "exhibition" &&
+          m.scoreA != null &&
+          m.scoreB != null &&
+          (m.teamA === username || m.teamB === username),
+      )
+      .reverse()
+      .slice(0, 6)
+      .map((m) => {
+        const isA = m.teamA === username;
+        const my = (isA ? m.scoreA : m.scoreB) as number;
+        const opp = (isA ? m.scoreB : m.scoreA) as number;
+        return {
+          id: m.id,
+          opponent: isA ? m.teamB : m.teamA,
+          won: my > opp,
+          score: `${my}–${opp}`,
+          tournament: m.tournament?.name ?? "",
+          round: m.round,
+        };
+      });
+  } catch {
+    // Backend unreachable — fall back to zeros / empty states.
+  }
 
   return (
     <div className="flex flex-col gap-10">
       {/* Profile header */}
       <section className="flex flex-wrap items-center justify-between gap-5">
         <div className="flex items-center gap-[18px]">
-          <div className="grid size-[72px] place-items-center rounded-lg border border-white/10 bg-[#16171B]">
-            <span className="font-display text-[28px] font-bold text-[#FFB800]">
-              {initials}
-            </span>
-          </div>
+          {/* Keep the initials tile when there is no picture, so the dashboard
+              looks unchanged for accounts that never uploaded one. */}
+          {photo ? (
+            <Avatar
+              username={username}
+              avatar={photo}
+              size={72}
+              rounded="lg"
+            />
+          ) : (
+            <div className="grid size-[72px] shrink-0 place-items-center rounded-lg border border-white/10 bg-[#16171B]">
+              <span className="font-display text-[28px] font-bold text-[#FFB800]">
+                {initials}
+              </span>
+            </div>
+          )}
           <div className="flex flex-col gap-0.5">
             <h1 className="font-display text-3xl font-bold leading-none tracking-[1px] text-white sm:text-[40px]">
               Hi, {username}
             </h1>
             <span className="text-[13px] font-semibold text-white/45">
-              Member since 2024 · Jakarta, ID
+              Your IAGL dashboard
             </span>
           </div>
         </div>
 
         <div className="flex gap-8 rounded-[10px] border border-white/[0.08] bg-[#101114] px-7 py-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="font-display text-[26px] font-bold leading-none text-[#6FCF97]">
-              {totalW}
-            </span>
-            <span className="text-[11px] font-bold tracking-[1.2px] text-white/40">
-              WINS
-            </span>
-          </div>
-          <div className="w-px bg-white/[0.08]" />
-          <div className="flex flex-col gap-0.5">
-            <span className="font-display text-[26px] font-bold leading-none text-[#E07A72]">
-              {totalL}
-            </span>
-            <span className="text-[11px] font-bold tracking-[1.2px] text-white/40">
-              LOSSES
-            </span>
-          </div>
-          <div className="w-px bg-white/[0.08]" />
-          <div className="flex flex-col gap-0.5">
-            <span className="font-display text-[26px] font-bold leading-none text-[#FFB800]">
-              5
-            </span>
-            <span className="text-[11px] font-bold tracking-[1.2px] text-white/40">
-              TROPHIES
-            </span>
-          </div>
+          {(
+            [
+              [wins, "WINS", "#6FCF97"],
+              [losses, "LOSSES", "#E07A72"],
+              [trophies, "TROPHIES", "#FFB800"],
+            ] as const
+          ).map(([value, label, color], i) => (
+            <div key={label} className="flex items-center gap-8">
+              {i > 0 && <div className="h-9 w-px bg-white/[0.08]" />}
+              <div className="flex flex-col gap-0.5">
+                <span
+                  className="font-display text-[26px] font-bold leading-none"
+                  style={{ color }}
+                >
+                  {value}
+                </span>
+                <span className="text-[11px] font-bold tracking-[1.2px] text-white/40">
+                  {label}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Competition records */}
-      <RecordsSlider games={games} />
+      <section className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl font-bold uppercase tracking-[1.5px] text-white">
+          Competition Records
+        </h2>
+        {records.length === 0 ? (
+          <EmptyCard>
+            No competition records yet — your record per game shows up here once
+            you start playing.
+          </EmptyCard>
+        ) : (
+          // Cards sit side by side and scroll horizontally once they run out of
+          // room, so a player with many games gets a slider instead of overflow.
+          <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {records.map((r) => {
+              const count = gameCounts[r.game] ?? 0;
+              return (
+                <div
+                  key={r.game}
+                  className="w-[180px] shrink-0 overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#101114]"
+                >
+                  <div
+                    className="h-[3px]"
+                    style={{ background: accentFor(r.game) }}
+                  />
+                  <div className="flex flex-col gap-2 p-4">
+                    <span className="truncate font-display text-[15px] font-extrabold text-white">
+                      {r.game}
+                    </span>
+                    <div className="font-display text-lg font-extrabold">
+                      <span className="text-[#6FCF97]">{r.w}W</span>
+                      <span className="text-white/25"> · </span>
+                      <span className="text-[#E07A72]">{r.l}L</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-base font-extrabold text-[#FFB800]">
+                        {r.points.toLocaleString("en-US")}
+                      </span>
+                      <span className="text-[10px] font-extrabold tracking-[0.5px] text-white/40">
+                        PTS
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-semibold text-white/40">
+                      {count} tournament{count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Tournaments + match history */}
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[1.15fr_0.85fr]">
-        <TournamentTabs ongoing={ongoing} past={past} />
+        <TournamentTabs username={username} />
 
         <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl font-bold uppercase tracking-[1.5px] text-white">
-              Match History
-            </h2>
-            <div className="flex gap-[5px]">
-              {matches.map((m, i) => (
-                <MatchBadge key={i} res={m.res} size="sm" />
+          <h2 className="font-display text-2xl font-bold uppercase tracking-[1.5px] text-white">
+            Match History
+          </h2>
+          {history.length === 0 ? (
+            <EmptyCard>
+              No matches played yet — your recent results will appear here.
+            </EmptyCard>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {history.map((h) => (
+                <div
+                  key={h.id}
+                  className="flex items-center gap-3 rounded-[10px] border border-white/[0.08] bg-[#101114] px-4 py-3"
+                >
+                  <span
+                    className="grid size-9 shrink-0 place-items-center rounded-md font-display text-sm font-extrabold"
+                    style={{
+                      background: h.won
+                        ? "rgba(111,207,151,0.14)"
+                        : "rgba(224,122,114,0.14)",
+                      color: h.won ? "#6FCF97" : "#E07A72",
+                    }}
+                  >
+                    {h.won ? "W" : "L"}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[13.5px] font-extrabold text-white">
+                      vs {h.opponent}
+                    </span>
+                    <span className="truncate text-[11.5px] font-semibold text-white/40">
+                      {[h.tournament, h.round].filter(Boolean).join(" · ")}
+                    </span>
+                  </div>
+                  <span className="shrink-0 font-display text-sm font-extrabold text-white/80">
+                    {h.score}
+                  </span>
+                </div>
               ))}
             </div>
-          </div>
-
-          <div className="flex flex-col rounded-[10px] border border-white/[0.08] bg-[#101114] px-5 py-1">
-            {matches.map((m, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3.5 border-b border-white/[0.05] py-[13px]"
-              >
-                <MatchBadge res={m.res} />
-                <div className="flex min-w-0 flex-1 flex-col gap-px">
-                  <span className="text-sm font-extrabold text-white">
-                    vs {m.opponent}
-                  </span>
-                  <span className="truncate text-[11.5px] font-semibold text-white/40">
-                    {m.sub}
-                  </span>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-px">
-                  <span className="font-display text-base font-bold text-white">
-                    {m.score}
-                  </span>
-                  <span className="text-[11px] font-semibold text-white/35">
-                    {m.date}
-                  </span>
-                </div>
-              </div>
-            ))}
-            <div className="py-[13px] text-center">
-              <Link
-                href="/profile"
-                className="text-[12.5px] font-extrabold tracking-[0.5px] text-[#FFB800] hover:text-[#FFDD66] hover:underline"
-              >
-                VIEW FULL HISTORY →
-              </Link>
-            </div>
-          </div>
+          )}
         </section>
       </div>
     </div>
