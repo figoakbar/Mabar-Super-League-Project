@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 
 import { PasswordField } from "@/components/auth/password-field";
+import { PasswordRules } from "@/components/auth/password-rules";
+import { passwordOk } from "@/lib/auth/password";
 import { resetPassword, type AuthState } from "@/lib/auth/actions";
 
 export function ResetPasswordForm({ token }: { token: string }) {
@@ -15,8 +17,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const [confirm, setConfirm] = useState("");
 
   const mismatch = confirm.length > 0 && password !== confirm;
-  const tooShort = password.length > 0 && password.length < 8;
-  const canSubmit = password.length >= 8 && !mismatch && token.length > 0;
+  const weak = password.length > 0 && !passwordOk(password);
+  const canSubmit = passwordOk(password) && !mismatch && token.length > 0;
 
   return (
     <form
@@ -46,9 +48,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
         label="NEW PASSWORD"
         value={password}
         onChange={setPassword}
-        invalid={tooShort}
-        hint="At least 8 characters."
+        invalid={weak}
       />
+      <PasswordRules password={password} />
       <PasswordField
         name="confirmPassword"
         label="CONFIRM NEW PASSWORD"

@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 
+import { passwordProblems } from "@/lib/auth/password";
+
 import { API_BASE_SERVER } from "@/lib/admin/api";
 import { AFTER_LOGIN, LOGIN_PATH } from "@/lib/auth/constants";
 import {
@@ -100,8 +102,12 @@ export async function register(
   if (password !== confirm) {
     return { fieldErrors: { confirmPassword: "Passwords don't match." } };
   }
-  if (password.length < 8) {
-    return { fieldErrors: { password: "Use at least 8 characters." } };
+  const regProblems = passwordProblems(password, {
+    username: String(formData.get("username") ?? ""),
+    email: String(formData.get("email") ?? ""),
+  });
+  if (regProblems.length) {
+    return { fieldErrors: { password: regProblems[0] } };
   }
   // Consent is checked here, not only by disabling the button: an unticked box
   // is simply absent from the form data, so this is the gate that actually holds.
@@ -155,8 +161,9 @@ export async function resetPassword(
   const confirm = String(formData.get("confirmPassword") ?? "");
 
   if (!token) return { error: "This reset link is missing its token." };
-  if (password.length < 8) {
-    return { fieldErrors: { password: "Use at least 8 characters." } };
+  const resetProblems = passwordProblems(password);
+  if (resetProblems.length) {
+    return { fieldErrors: { password: resetProblems[0] } };
   }
   if (password !== confirm) {
     return { fieldErrors: { confirmPassword: "Passwords don't match." } };

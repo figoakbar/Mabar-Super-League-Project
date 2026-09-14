@@ -26,7 +26,7 @@ export class RegisterDto {
   username: string;
 
   @IsString()
-  @MinLength(8, { message: "password must be at least 8 characters" })
+  @MinLength(10, { message: "password must be at least 10 characters" })
   @MaxLength(200)
   password: string;
 
@@ -92,7 +92,7 @@ export class ResetPasswordDto {
   token: string;
 
   @IsString()
-  @MinLength(8, { message: "password must be at least 8 characters" })
+  @MinLength(10, { message: "password must be at least 10 characters" })
   @MaxLength(200)
   password: string;
 }
@@ -137,7 +137,7 @@ export class ChangePasswordDto {
   currentPassword?: string;
 
   @IsString()
-  @MinLength(8, { message: "password must be at least 8 characters" })
+  @MinLength(10, { message: "password must be at least 10 characters" })
   @MaxLength(200)
   newPassword: string;
 }

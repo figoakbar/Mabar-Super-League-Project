@@ -15,6 +15,7 @@ import {
   hashToken,
   verifyPassword,
 } from "./crypto.util";
+import { passwordProblems } from "./password.policy";
 import type {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -77,6 +78,15 @@ export class AuthService {
    * Emails listed in ADMIN_EMAILS become admins on sign-up / sign-in. This is
    * how the very first admin exists without a chicken-and-egg bootstrap.
    */
+  /** Refuse a new password that breaks the shared policy, naming the first problem. */
+  private assertPasswordOk(
+    password: string,
+    who: { username?: string; email?: string },
+  ): void {
+    const problems = passwordProblems(password, who);
+    if (problems.length) throw new BadRequestException(problems[0]);
+  }
+
   private isAdminEmail(email: string): boolean {
     return (process.env.ADMIN_EMAILS ?? "")
       .split(",")
@@ -119,6 +129,8 @@ export class AuthService {
           : "That username is taken",
       );
     }
+
+    this.assertPasswordOk(dto.password, { username, email });
 
     const user = await this.prisma.user.create({
       data: {
@@ -306,6 +318,12 @@ export class AuthService {
       );
     }
 
+    const owner = await this.prisma.user.findUnique({
+      where: { id: row.userId },
+      select: { username: true, email: true },
+    });
+    this.assertPasswordOk(dto.password, owner ?? {});
+
     await this.prisma.user.update({
       where: { id: row.userId },
       data: { passwordHash: await hashPassword(dto.password) },
@@ -417,6 +435,11 @@ export class AuthService {
         throw new BadRequestException("Your current password is incorrect");
       }
     }
+
+    this.assertPasswordOk(dto.newPassword, {
+      username: user.username,
+      email: user.email,
+    });
 
     await this.prisma.user.update({
       where: { id: userId },

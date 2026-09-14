@@ -418,7 +418,7 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
         title={user.hasPassword ? "Change password" : "Set a password"}
         hint={
           user.hasPassword
-            ? "Use at least 8 characters."
+            ? "At least 10 characters, with a letter and a number."
             : "You signed up with Google. Add a password so you can also log in with your email."
         }
       >

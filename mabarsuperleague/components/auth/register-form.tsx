@@ -19,7 +19,9 @@ import {
   PC_PLATFORMS,
   PlatformPicker,
 } from "@/components/shared/gamer-platforms";
+import { PasswordRules } from "@/components/auth/password-rules";
 import { register, type AuthState } from "@/lib/auth/actions";
+import { passwordOk } from "@/lib/auth/password";
 
 function Label({ htmlFor, children }: { htmlFor: string; children: string }) {
   return (
@@ -81,14 +83,14 @@ export function RegisterForm() {
       setter((prev) => ({ ...prev, [key]: value }));
 
   const mismatch = confirm.length > 0 && password !== confirm;
-  const tooShort = password.length > 0 && password.length < 8;
+  const weak = password.length > 0 && !passwordOk(password, { username, email });
   const noDevice = !onConsole && !onPc;
   const consoleComplete = deviceComplete(onConsole, CONSOLE_PLATFORMS, consolePicks);
   const pcComplete = deviceComplete(onPc, PC_PLATFORMS, pcPicks);
   const consoleId = onConsole ? combineIds(CONSOLE_PLATFORMS, consolePicks) : "";
   const pcId = onPc ? combineIds(PC_PLATFORMS, pcPicks) : "";
   const canSubmit =
-    password.length >= 8 &&
+    passwordOk(password, { username, email }) &&
     !mismatch &&
     !noDevice &&
     consoleComplete &&
@@ -158,8 +160,7 @@ export function RegisterForm() {
         <PasswordField
           value={password}
           onChange={setPassword}
-          invalid={tooShort}
-          hint="At least 8 characters."
+          invalid={weak}
         />
         <PasswordField
           name="confirmPassword"
@@ -169,6 +170,7 @@ export function RegisterForm() {
           invalid={mismatch}
         />
       </div>
+      <PasswordRules password={password} username={username} email={email} />
       {mismatch && (
         <p className="-mt-1 text-xs font-bold text-[#FF8A80]">
           Passwords don&apos;t match.
