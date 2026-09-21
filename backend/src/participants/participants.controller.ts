@@ -4,6 +4,7 @@ import { extname } from "node:path";
 import {
   BadRequestException,
   Body,
+  ForbiddenException,
   Controller,
   Delete,
   Get,
@@ -51,6 +52,13 @@ export class ParticipantsController {
   @Post()
   create(@Body() dto: CreateParticipantDto, @CurrentUser() user: PublicUser) {
     const isAdmin = user.role === "admin";
+    // A player must finish the profile step (username, phone, gamer IDs,
+    // consent) before entering a bracket; opponents need those to find them.
+    if (!isAdmin && !user.profileComplete) {
+      throw new ForbiddenException(
+        "Complete your profile before registering for a tournament",
+      );
+    }
     return this.participants.create({
       ...dto,
       team: isAdmin && dto.team?.trim() ? dto.team.trim() : user.username,

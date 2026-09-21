@@ -54,7 +54,7 @@ async function bootstrap() {
       : "[backend] ADMIN_EMAILS is empty — no account will be granted admin",
   );
   if (!process.env.INTERNAL_API_KEY) {
-    console.warn("[backend] INTERNAL_API_KEY is not set — Google sign-in is disabled");
+    console.warn("[backend] INTERNAL_API_KEY is not set — Google/Discord sign-in is disabled");
   }
 }
 

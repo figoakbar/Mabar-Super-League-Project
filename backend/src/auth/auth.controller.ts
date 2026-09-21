@@ -25,12 +25,8 @@ import { AuthService } from "./auth.service";
 import { CurrentUser, Public } from "./auth.decorators";
 import type { PublicUser } from "./auth.service";
 import {
-  ChangePasswordDto,
-  ForgotPasswordDto,
-  GoogleLoginDto,
-  LoginDto,
-  RegisterDto,
-  ResetPasswordDto,
+  CompleteProfileDto,
+  OAuthProfileDto,
   UpdateProfileDto,
 } from "./dto/auth.dto";
 import { rateLimit } from "./rate-limit";
@@ -64,43 +60,40 @@ function bearer(req: Request): string {
   return value.trim();
 }
 
+/**
+ * The OAuth routes are server-to-server: the Next.js server does the dance
+ * with Google or Discord, verifies the identity, and hands the profile here.
+ * A shared secret proves the call came from that server and not from a
+ * browser claiming to be someone.
+ */
+function assertInternalKey(req: Request): void {
+  const expected = process.env.INTERNAL_API_KEY;
+  const provided = req.headers["x-internal-key"];
+  if (!expected || provided !== expected) {
+    throw new ForbiddenException("Invalid internal key");
+  }
+}
+
 @Controller("auth")
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
-  @Post("register")
-  register(@Body() dto: RegisterDto, @Req() req: Request) {
-    guard(`register:${clientIp(req)}`, 10, 15 * MINUTE);
-    return this.auth.register(dto, req.headers["user-agent"]);
-  }
-
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @Post("login")
-  login(@Body() dto: LoginDto, @Req() req: Request) {
-    // Limit per IP and per account so neither a single source nor a single
-    // target can be hammered.
-    guard(`login-ip:${clientIp(req)}`, 20, 15 * MINUTE);
-    guard(`login-user:${dto.email.trim().toLowerCase()}`, 8, 15 * MINUTE);
-    return this.auth.login(dto, req.headers["user-agent"]);
-  }
-
-  /**
-   * Server-to-server: the Next.js server verifies the Google ID token, then
-   * calls this with the verified profile. Protected by INTERNAL_API_KEY so a
-   * browser cannot forge a "Google" identity.
-   */
-  @Public()
   @HttpCode(HttpStatus.OK)
   @Post("google")
-  google(@Body() dto: GoogleLoginDto, @Req() req: Request) {
-    const expected = process.env.INTERNAL_API_KEY;
-    const provided = req.headers["x-internal-key"];
-    if (!expected || provided !== expected) {
-      throw new ForbiddenException("Invalid internal key");
-    }
-    return this.auth.loginWithGoogle(dto, req.headers["user-agent"]);
+  google(@Body() dto: OAuthProfileDto, @Req() req: Request) {
+    assertInternalKey(req);
+    guard(`oauth:${clientIp(req)}`, 60, 15 * MINUTE);
+    return this.auth.loginWithProvider("google", dto, req.headers["user-agent"]);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post("discord")
+  discord(@Body() dto: OAuthProfileDto, @Req() req: Request) {
+    assertInternalKey(req);
+    guard(`oauth:${clientIp(req)}`, 60, 15 * MINUTE);
+    return this.auth.loginWithProvider("discord", dto, req.headers["user-agent"]);
   }
 
   @Get("me")
@@ -108,37 +101,19 @@ export class AuthController {
     return this.auth.me(bearer(req));
   }
 
-  @HttpCode(HttpStatus.OK)
   @Post("logout")
+  @HttpCode(HttpStatus.OK)
   logout(@Req() req: Request) {
     return this.auth.logout(bearer(req));
   }
 
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @Post("forgot-password")
-  forgot(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
-    guard(`forgot-ip:${clientIp(req)}`, 6, 15 * MINUTE);
-    guard(`forgot-user:${dto.email.trim().toLowerCase()}`, 3, 15 * MINUTE);
-    const base = process.env.APP_URL ?? "http://localhost:3000";
-    return this.auth.forgotPassword(dto, base);
-  }
-
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @Post("reset-password")
-  reset(@Body() dto: ResetPasswordDto, @Req() req: Request) {
-    guard(`reset:${clientIp(req)}`, 10, 15 * MINUTE);
-    return this.auth.resetPassword(dto);
-  }
-
-  /** Convenience for the frontend: who am I, resolved from the guard. */
+  /** Cheap "who am I" for clients that already hold a resolved session. */
   @Get("session")
   session(@CurrentUser() user?: PublicUser) {
     return { user };
   }
 
-  /** Edit your own profile. The id comes from the session, never the body. */
+  /** Edit the signed-in user's own profile. */
   @Patch("me")
   updateProfile(
     @Body() dto: UpdateProfileDto,
@@ -147,15 +122,14 @@ export class AuthController {
     return this.auth.updateProfile(user.id, dto);
   }
 
+  /** The mandatory first-sign-in step. */
+  @Post("me/complete")
   @HttpCode(HttpStatus.OK)
-  @Post("me/password")
-  changePassword(
-    @Body() dto: ChangePasswordDto,
+  completeProfile(
+    @Body() dto: CompleteProfileDto,
     @CurrentUser() user: PublicUser,
-    @Req() req: Request,
   ) {
-    guard(`change-pw:${clientIp(req)}`, 10, 15 * MINUTE);
-    return this.auth.changePassword(user.id, dto);
+    return this.auth.completeProfile(user.id, dto);
   }
 
   /** Upload a profile picture (JPG/PNG/WEBP/GIF, max 2 MB). */

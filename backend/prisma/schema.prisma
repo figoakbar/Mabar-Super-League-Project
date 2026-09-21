@@ -10,25 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// A registered account. `passwordHash` is null for Google-only sign-ups.
+/// A registered account. Sign-in is passwordless: an account is bound to a
+/// Google and/or Discord identity, and matched to an existing row by email on
+/// first sign-in with a new provider. `profileCompletedAt` is set once the
+/// player has finished the mandatory profile step (username, phone, gamer IDs,
+/// consent); until then they cannot register for tournaments.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  username     String   @unique
-  passwordHash String?
-  role         String   @default("user") // user | admin
-  phone        String   @default("")
-  consoleId    String   @default("")
-  pcId         String   @default("")
-  instagram    String   @default("")
-  googleId     String?  @unique
-  avatarUrl    String   @default("")
-  lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  username           String    @unique
+  role               String    @default("user") // user | admin
+  phone              String    @default("")
+  consoleId          String    @default("")
+  pcId               String    @default("")
+  instagram          String    @default("")
+  googleId           String?   @unique
+  discordId          String?   @unique
+  avatarUrl          String    @default("")
+  profileCompletedAt DateTime?
+  agreedAt           DateTime? // when the Terms & Privacy Policy were accepted
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  sessions      Session[]
-  resetTokens   PasswordResetToken[]
+  sessions Session[]
 }
 
 /// Opaque server-side session. Only the SHA-256 hash of the token is stored,
@@ -40,19 +45,6 @@ model Session {
   userAgent String   @default("")
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-
-  @@index([userId])
-}
-
-/// Single-use password reset token (hash only, short lived).
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
 
   @@index([userId])

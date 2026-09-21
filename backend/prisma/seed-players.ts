@@ -5,20 +5,17 @@
  * ADDS data and is safe to re-run: users are matched by email/username and
  * tournaments by name, so existing rows are left untouched.
  *
- * It creates a batch of real user accounts (all sharing one password, for easy
- * testing) plus a handful of *completed* knockout tournaments, so the Players
- * page has genuine match history to derive wins / losses / trophies from.
+ * It creates a batch of demo player accounts plus a handful of *completed*
+ * knockout tournaments, so the Players page has genuine match history to derive
+ * wins / losses / trophies from. Sign-in is passwordless (Google / Discord), so
+ * these accounts carry no credentials: they exist purely as directory data and
+ * cannot be signed into.
  *
  *   Run from the backend/ directory:  npx ts-node prisma/seed-players.ts
  */
 import { PrismaClient } from "@prisma/client";
 
-import { hashPassword } from "../src/auth/crypto.util";
-
 const prisma = new PrismaClient();
-
-/** One shared password for every seeded account — for local testing only. */
-const PASSWORD = "MabarLeague2026";
 
 const USERNAMES = [
   "RendiPratama",
@@ -90,9 +87,13 @@ async function ensureUser(username: string, createdAt: Date): Promise<void> {
     data: {
       email,
       username,
-      passwordHash: await hashPassword(PASSWORD),
       role: "user",
       createdAt,
+      // Demo accounts are "complete" so they never surface as onboarding
+      // stragglers in the admin list; a Steam id keeps them findable.
+      pcId: `Steam: ${username}`,
+      profileCompletedAt: createdAt,
+      agreedAt: createdAt,
     },
   });
 }
@@ -202,7 +203,7 @@ async function main() {
   console.log("Seeding completed tournaments…");
   for (const def of tournaments) await ensureTournament(def);
 
-  console.log("\nDone. Shared password for all seeded accounts:", PASSWORD);
+  console.log("\nDone. Demo accounts have no credentials — sign-in is Google/Discord only.");
 }
 
 main()

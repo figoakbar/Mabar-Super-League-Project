@@ -2,37 +2,26 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import type { User } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
-import {
-  generateToken,
-  hashPassword,
-  hashToken,
-  verifyPassword,
-} from "./crypto.util";
-import { passwordProblems } from "./password.policy";
+import { generateToken, hashToken } from "./crypto.util";
 import type {
-  ChangePasswordDto,
-  ForgotPasswordDto,
-  GoogleLoginDto,
-  LoginDto,
-  RegisterDto,
-  ResetPasswordDto,
+  CompleteProfileDto,
+  OAuthProfileDto,
   UpdateProfileDto,
 } from "./dto/auth.dto";
-import { MailService } from "./mail.service";
 
 const DAY = 24 * 60 * 60 * 1000;
-const SESSION_TTL = 12 * 60 * 60 * 1000; // 12 hours
-const REMEMBER_TTL = 30 * DAY;
-const RESET_TTL = 60 * 60 * 1000; // 1 hour
+/** Signing in through a provider is a deliberate act, so sessions are long. */
+const SESSION_TTL = 30 * DAY;
 
-/** Shape returned to the client — never includes the password hash. */
+export type Provider = "google" | "discord";
+
+/** Shape returned to the client. */
 export type PublicUser = {
   id: string;
   email: string;
@@ -43,12 +32,18 @@ export type PublicUser = {
   pcId: string;
   instagram: string;
   avatarUrl: string;
-  hasPassword: boolean;
+  /** Which sign-in identities are bound to the account. */
+  providers: Provider[];
+  /** False until the mandatory first-sign-in profile step is done. */
+  profileComplete: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 };
 
 export function toPublicUser(u: User): PublicUser {
+  const providers: Provider[] = [];
+  if (u.googleId) providers.push("google");
+  if (u.discordId) providers.push("discord");
   return {
     id: u.id,
     email: u.email,
@@ -59,34 +54,24 @@ export function toPublicUser(u: User): PublicUser {
     pcId: u.pcId,
     instagram: u.instagram,
     avatarUrl: u.avatarUrl,
-    hasPassword: u.passwordHash !== null,
+    providers,
+    profileComplete: u.profileCompletedAt !== null,
     lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
     createdAt: u.createdAt.toISOString(),
   };
 }
 
+/** Timestamps written when a player finishes the profile step. */
+type CompletionStamp = { profileCompletedAt: Date; agreedAt: Date };
+
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mail: MailService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Emails listed in ADMIN_EMAILS become admins on sign-up / sign-in. This is
-   * how the very first admin exists without a chicken-and-egg bootstrap.
+   * Emails listed in ADMIN_EMAILS become admins on sign-in. This is how the
+   * very first admin exists without a chicken-and-egg bootstrap.
    */
-  /** Refuse a new password that breaks the shared policy, naming the first problem. */
-  private assertPasswordOk(
-    password: string,
-    who: { username?: string; email?: string },
-  ): void {
-    const problems = passwordProblems(password, who);
-    if (problems.length) throw new BadRequestException(problems[0]);
-  }
-
   private isAdminEmail(email: string): boolean {
     return (process.env.ADMIN_EMAILS ?? "")
       .split(",")
@@ -95,10 +80,9 @@ export class AuthService {
       .includes(email.toLowerCase());
   }
 
-  private async issueSession(user: User, remember: boolean, userAgent = "") {
+  private async issueSession(user: User, userAgent = "") {
     const token = generateToken();
-    const ttl = remember ? REMEMBER_TTL : SESSION_TTL;
-    const expiresAt = new Date(Date.now() + ttl);
+    const expiresAt = new Date(Date.now() + SESSION_TTL);
     await this.prisma.session.create({
       data: {
         tokenHash: hashToken(token),
@@ -111,80 +95,43 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
-    return { token, expiresAt: expiresAt.toISOString(), maxAgeSeconds: ttl / 1000 };
+    return {
+      token,
+      expiresAt: expiresAt.toISOString(),
+      maxAgeSeconds: SESSION_TTL / 1000,
+    };
   }
 
-  async register(dto: RegisterDto, userAgent?: string) {
+  /**
+   * Sign in with an identity the Next.js server has already verified with the
+   * provider. The provider id is the strongest claim, so it is checked first;
+   * failing that, the email links a pre-existing account (including every
+   * account from the password era) on its first provider sign-in.
+   */
+  async loginWithProvider(
+    provider: Provider,
+    dto: OAuthProfileDto,
+    userAgent?: string,
+  ) {
     const email = dto.email.trim().toLowerCase();
-    const username = dto.username.trim();
+    const idField = provider === "google" ? "googleId" : "discordId";
 
-    const clash = await this.prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
-      select: { email: true, username: true },
-    });
-    if (clash) {
-      throw new ConflictException(
-        clash.email === email
-          ? "An account with that email already exists"
-          : "That username is taken",
-      );
-    }
-
-    this.assertPasswordOk(dto.password, { username, email });
-
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        username,
-        passwordHash: await hashPassword(dto.password),
-        role: this.isAdminEmail(email) ? "admin" : "user",
-        phone: dto.phone ?? "",
-        consoleId: dto.consoleId ?? "",
-        pcId: dto.pcId ?? "",
-        instagram: dto.instagram ?? "",
-      },
-    });
-
-    const session = await this.issueSession(user, !!dto.remember, userAgent);
-    return { user: toPublicUser(user), ...session };
-  }
-
-  async login(dto: LoginDto, userAgent?: string) {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
-
-    // Verify even when the user is missing so the response time does not
-    // reveal whether an email is registered.
-    const ok = await verifyPassword(dto.password, user?.passwordHash ?? null);
-    if (!user || !ok) {
-      throw new UnauthorizedException("Email or password is incorrect");
-    }
-
-    // Keep admin rights in sync with ADMIN_EMAILS on every login.
-    const shouldBeAdmin = this.isAdminEmail(email);
-    const fresh =
-      shouldBeAdmin && user.role !== "admin"
-        ? await this.prisma.user.update({
-            where: { id: user.id },
-            data: { role: "admin" },
+    const byId =
+      provider === "google"
+        ? await this.prisma.user.findUnique({
+            where: { googleId: dto.providerId },
           })
-        : user;
-
-    const session = await this.issueSession(fresh, !!dto.remember, userAgent);
-    return { user: toPublicUser(fresh), ...session };
-  }
-
-  /** Called by the Next.js server once it has verified a Google ID token. */
-  async loginWithGoogle(dto: GoogleLoginDto, userAgent?: string) {
-    const email = dto.email.trim().toLowerCase();
-    let user = await this.prisma.user.findFirst({
-      where: { OR: [{ googleId: dto.googleId }, { email }] },
-    });
+        : await this.prisma.user.findUnique({
+            where: { discordId: dto.providerId },
+          });
+    let user = byId ?? (await this.prisma.user.findUnique({ where: { email } }));
 
     if (user) {
-      // Link the Google account to the existing email-based account.
+      // Bind this provider to the account if it isn't yet, and pick up an avatar
+      // when the account has none. Never overwrite an id that is already set:
+      // that would let one provider identity hijack another's account.
       const patch: Record<string, unknown> = {};
-      if (!user.googleId) patch.googleId = dto.googleId;
+      if (!user[idField]) patch[idField] = dto.providerId;
       if (!user.avatarUrl && dto.avatarUrl) patch.avatarUrl = dto.avatarUrl;
       if (this.isAdminEmail(email) && user.role !== "admin") {
         patch.role = "admin";
@@ -196,19 +143,21 @@ export class AuthService {
         });
       }
     } else {
+      // A provisional username; the profile step lets the player choose theirs.
       user = await this.prisma.user.create({
         data: {
           email,
           username: await this.uniqueUsername(dto.name || email.split("@")[0]),
-          googleId: dto.googleId,
+          ...(provider === "google"
+            ? { googleId: dto.providerId }
+            : { discordId: dto.providerId }),
           avatarUrl: dto.avatarUrl ?? "",
           role: this.isAdminEmail(email) ? "admin" : "user",
         },
       });
     }
 
-    // Google sign-in is an explicit, deliberate action — treat it as "remember".
-    const session = await this.issueSession(user, true, userAgent);
+    const session = await this.issueSession(user, userAgent);
     return { user: toPublicUser(user), ...session };
   }
 
@@ -261,91 +210,20 @@ export class AuthService {
     return { ok: true };
   }
 
-  /** Revoke every session for a user — used after a password reset. */
-  private async revokeAllSessions(userId: string) {
-    await this.prisma.session.deleteMany({ where: { userId } });
-  }
-
-  async forgotPassword(dto: ForgotPasswordDto, resetUrlBase: string) {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    let devLink: string | undefined;
-
-    // Always report success: revealing which emails exist enables enumeration.
-    if (user) {
-      // One live token at a time.
-      await this.prisma.passwordResetToken.deleteMany({
-        where: { userId: user.id, usedAt: null },
-      });
-      const token = generateToken();
-      await this.prisma.passwordResetToken.create({
-        data: {
-          tokenHash: hashToken(token),
-          userId: user.id,
-          expiresAt: new Date(Date.now() + RESET_TTL),
-        },
-      });
-      const link = `${resetUrlBase.replace(/\/$/, "")}/reset-password?token=${token}`;
-      await this.mail
-        .sendPasswordReset(user.email, link, RESET_TTL / 60000)
-        .catch((e: unknown) =>
-          this.logger.error(
-            `Failed to send reset email: ${e instanceof Error ? e.message : e}`,
-          ),
-        );
-      // Development convenience: with no SMTP configured there is no inbox to
-      // check, so hand the link back for the UI to show. Never in production.
-      if (!this.mail.enabled && process.env.NODE_ENV !== "production") {
-        devLink = link;
-      }
-    }
-
-    return {
-      ok: true,
-      message:
-        "If an account exists for that email, a reset link is on its way.",
-      ...(devLink ? { devLink } : {}),
-    };
-  }
-
-  async resetPassword(dto: ResetPasswordDto) {
-    const row = await this.prisma.passwordResetToken.findUnique({
-      where: { tokenHash: hashToken(dto.token) },
-    });
-    if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
-      throw new BadRequestException(
-        "This reset link is invalid or has expired. Request a new one.",
-      );
-    }
-
-    const owner = await this.prisma.user.findUnique({
-      where: { id: row.userId },
-      select: { username: true, email: true },
-    });
-    this.assertPasswordOk(dto.password, owner ?? {});
-
-    await this.prisma.user.update({
-      where: { id: row.userId },
-      data: { passwordHash: await hashPassword(dto.password) },
-    });
-    await this.prisma.passwordResetToken.update({
-      where: { id: row.id },
-      data: { usedAt: new Date() },
-    });
-    // Anyone holding an old session (including an attacker) is logged out.
-    await this.revokeAllSessions(row.userId);
-
-    return { ok: true };
-  }
-
   /**
    * Update the signed-in user's own profile.
    *
    * A username change has to ripple outwards: registrations, matches and race
    * results all reference players by name, so they are rewritten in the same
-   * transaction to keep a renamed player attached to their history.
+   * transaction to keep a renamed player attached to their history. When the
+   * profile step is being completed, its timestamps ride along in that same
+   * transaction so the account can never be marked complete without its data.
    */
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+    stamp?: CompletionStamp,
+  ) {
     const current = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!current) throw new NotFoundException("Account not found");
 
@@ -368,6 +246,7 @@ export class AuthService {
       ...(dto.instagram !== undefined
         ? { instagram: dto.instagram.trim() }
         : {}),
+      ...(stamp ?? {}),
     };
 
     const [user] = await this.prisma.$transaction([
@@ -401,6 +280,22 @@ export class AuthService {
     return toPublicUser(user);
   }
 
+  /**
+   * The mandatory first-sign-in step: a chosen username, a phone number, at
+   * least one gamer ID, and explicit consent to the Terms and Privacy Policy.
+   * Re-submitting simply re-stamps, so a player can revisit it harmlessly.
+   */
+  async completeProfile(userId: string, dto: CompleteProfileDto) {
+    if (!dto.consoleId.trim() && !dto.pcId.trim()) {
+      throw new BadRequestException("Add at least one gamer ID (console or PC)");
+    }
+    const now = new Date();
+    return this.updateProfile(userId, dto, {
+      profileCompletedAt: now,
+      agreedAt: now,
+    });
+  }
+
   /** Point the account at a newly uploaded avatar. */
   async setAvatar(userId: string, avatarUrl: string) {
     const user = await this.prisma.user.update({
@@ -416,44 +311,5 @@ export class AuthService {
       data: { avatarUrl: "" },
     });
     return toPublicUser(user);
-  }
-
-  /**
-   * Change the password of the signed-in user. Accounts created through Google
-   * have no password yet, so those may set one without proving an old one.
-   */
-  async changePassword(userId: string, dto: ChangePasswordDto) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException("Account not found");
-
-    if (user.passwordHash) {
-      const ok = await verifyPassword(
-        dto.currentPassword ?? "",
-        user.passwordHash,
-      );
-      if (!ok) {
-        throw new BadRequestException("Your current password is incorrect");
-      }
-    }
-
-    this.assertPasswordOk(dto.newPassword, {
-      username: user.username,
-      email: user.email,
-    });
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: await hashPassword(dto.newPassword) },
-    });
-    return { ok: true };
-  }
-
-  /** Housekeeping: drop expired sessions and reset tokens. */
-  async purgeExpired() {
-    const now = new Date();
-    await this.prisma.session.deleteMany({ where: { expiresAt: { lt: now } } });
-    await this.prisma.passwordResetToken.deleteMany({
-      where: { expiresAt: { lt: now } },
-    });
   }
 }
