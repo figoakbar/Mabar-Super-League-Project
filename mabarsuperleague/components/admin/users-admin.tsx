@@ -178,14 +178,19 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap gap-1.5">
-                        {u.hasPassword && (
-                          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-extrabold text-white/55">
-                            PASSWORD
-                          </span>
-                        )}
-                        {u.avatarUrl && (
+                        {u.providers.includes("google") && (
                           <span className="rounded-md bg-[#4FA3E0]/[0.14] px-2 py-0.5 text-[10.5px] font-extrabold text-[#4FA3E0]">
                             GOOGLE
+                          </span>
+                        )}
+                        {u.providers.includes("discord") && (
+                          <span className="rounded-md bg-[#5865F2]/[0.18] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8E97FF]">
+                            DISCORD
+                          </span>
+                        )}
+                        {!u.profileComplete && (
+                          <span className="rounded-md bg-[#FFB800]/[0.14] px-2 py-0.5 text-[10.5px] font-extrabold text-[#FFB800]">
+                            INCOMPLETE
                           </span>
                         )}
                       </div>

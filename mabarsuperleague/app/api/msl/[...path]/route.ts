@@ -20,9 +20,8 @@ const ALLOWED = [
   /^reports(\/|$)/,
   /^leaderboard(\/|$)/,
   /^seasons(\/|$)/,
-  // Self-service profile edits only. Login, register and the password-reset
-  // endpoints stay off-limits here — those go through server actions, which
-  // also own the session cookie.
+  // Self-service profile edits only. The OAuth sign-in routes stay off-limits
+  // here — they are server-to-server and own the session cookie.
   /^auth\/me(\/|$)/,
 ];
 

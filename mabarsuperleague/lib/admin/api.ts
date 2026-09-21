@@ -264,7 +264,10 @@ export type AdminUser = {
   pcId: string;
   instagram: string;
   avatarUrl: string;
-  hasPassword: boolean;
+  /** Which sign-in identities are bound to the account. */
+  providers: ("google" | "discord")[];
+  /** False until the first-sign-in profile step is done. */
+  profileComplete: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   activeSessions: number;
@@ -308,14 +311,6 @@ export const api = {
   }) =>
     request<AdminUser>("/auth/me", {
       method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-  changePassword: (data: {
-    currentPassword?: string;
-    newPassword: string;
-  }) =>
-    request<{ ok: true }>("/auth/me/password", {
-      method: "POST",
       body: JSON.stringify(data),
     }),
   removeAvatar: () =>

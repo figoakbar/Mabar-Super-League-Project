@@ -2,7 +2,7 @@
 
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, Trash2 } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
 
 import { Avatar } from "@/components/shared/user-menu";
 import {
@@ -93,10 +93,6 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
-  const [pwBusy, setPwBusy] = useState(false);
-  const [pwError, setPwError] = useState<string | null>(null);
-  const [pwDone, setPwDone] = useState(false);
 
   const set = (k: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -172,34 +168,6 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
       setSaveError(err instanceof Error ? err.message : "Could not save");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function savePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPwError(null);
-    setPwDone(false);
-    if (pw.next.length < 8) {
-      setPwError("New password must be at least 8 characters.");
-      return;
-    }
-    if (pw.next !== pw.confirm) {
-      setPwError("New passwords don't match.");
-      return;
-    }
-    setPwBusy(true);
-    try {
-      await api.changePassword({
-        ...(user.hasPassword ? { currentPassword: pw.current } : {}),
-        newPassword: pw.next,
-      });
-      setPw({ current: "", next: "", confirm: "" });
-      setPwDone(true);
-      router.refresh();
-    } catch (err) {
-      setPwError(err instanceof Error ? err.message : "Could not change it");
-    } finally {
-      setPwBusy(false);
     }
   }
 
@@ -304,6 +272,16 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
               <input value={user.email} disabled className={inputClass} />
               <span className="text-[11px] font-semibold text-white/30">
                 Email can&apos;t be changed here — it identifies your account.
+                {user.providers.length > 0 && (
+                  <>
+                    {" "}
+                    Signed in with{" "}
+                    {user.providers
+                      .map((p) => (p === "google" ? "Google" : "Discord"))
+                      .join(" and ")}
+                    .
+                  </>
+                )}
               </span>
             </label>
 
@@ -410,78 +388,6 @@ export function ProfileEditor({ user }: { user: SessionUser }) {
               </button>
             )}
           </div>
-        </form>
-      </Card>
-
-      {/* Password */}
-      <Card
-        title={user.hasPassword ? "Change password" : "Set a password"}
-        hint={
-          user.hasPassword
-            ? "At least 10 characters, with a letter and a number."
-            : "You signed up with Google. Add a password so you can also log in with your email."
-        }
-      >
-        <form onSubmit={savePassword} className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {user.hasPassword && (
-              <label className="flex flex-col gap-1.5">
-                <span className={labelClass}>CURRENT PASSWORD</span>
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={pw.current}
-                  onChange={(e) =>
-                    setPw((p) => ({ ...p, current: e.target.value }))
-                  }
-                  required
-                  className={inputClass}
-                />
-              </label>
-            )}
-            <label className="flex flex-col gap-1.5">
-              <span className={labelClass}>NEW PASSWORD</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={pw.next}
-                onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))}
-                required
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className={labelClass}>CONFIRM NEW PASSWORD</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={pw.confirm}
-                onChange={(e) =>
-                  setPw((p) => ({ ...p, confirm: e.target.value }))
-                }
-                required
-                className={inputClass}
-              />
-            </label>
-          </div>
-
-          {pwError && <Note kind="error">{pwError}</Note>}
-          {pwDone && <Note kind="ok">Password updated.</Note>}
-
-          <button
-            type="submit"
-            disabled={pwBusy}
-            className="w-fit cursor-pointer rounded-xl border border-white/[0.14] px-5 py-2.5 font-display text-sm font-bold text-white transition-colors hover:bg-white/[0.06] disabled:opacity-50"
-          >
-            {pwBusy ? (
-              "Saving…"
-            ) : (
-              <>
-                <Check className="mr-1.5 inline size-4 align-[-3px]" />
-                {user.hasPassword ? "Update password" : "Set password"}
-              </>
-            )}
-          </button>
         </form>
       </Card>
     </div>

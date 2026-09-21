@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { IaglMark } from "@/components/shared/iagl-mark";
 
-/** Shared chrome for the standalone auth pages (forgot / reset password). */
+/** Shared chrome for the standalone auth pages (e.g. complete profile). */
 export function AuthShell({
   title,
   subtitle,
@@ -29,7 +29,7 @@ export function AuthShell({
       />
 
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-[22px] sm:px-10">
-        <Link href="/login" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <IaglMark className="size-[36px]" />
           <span className="font-baloo text-[19px] font-extrabold tracking-[0.3px] text-white">
             Indonesia Arcadia Gaming League

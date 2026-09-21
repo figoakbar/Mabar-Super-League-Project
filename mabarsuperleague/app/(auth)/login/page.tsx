@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { LoginForm } from "@/components/auth/login-form";
+import { ProviderButtons } from "@/components/auth/provider-buttons";
 import { IaglMark } from "@/components/shared/iagl-mark";
 
 export const metadata: Metadata = {
-  title: "Log in",
+  title: "Sign in",
 };
 
 const pentagon =
@@ -24,9 +24,9 @@ function RatingPill({ rating }: { rating: string }) {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next, reset, error } = await searchParams;
+  const { next, error } = await searchParams;
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#0C0C10] font-nunito">
@@ -77,22 +77,19 @@ export default async function LoginPage({
         </div>
 
         <h1 className="text-center font-baloo text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl">
-          Log In & Start Playing
+          Sign In & Start Playing
         </h1>
 
         <p className="max-w-[430px] text-center text-[15px] leading-relaxed text-white/55">
-          Log in to your account and continue your adventure. Your friends are
-          already waiting below!
+          One tap with Google or Discord — no password to remember. Your
+          friends are already waiting below!
         </p>
 
-        <LoginForm
+        <ProviderButtons
           next={next}
           errorCode={error}
-          notice={
-            reset
-              ? "Password updated. Log in with your new password."
-              : undefined
-          }
+          googleEnabled={Boolean(process.env.GOOGLE_CLIENT_ID)}
+          discordEnabled={Boolean(process.env.DISCORD_CLIENT_ID)}
         />
       </div>
 

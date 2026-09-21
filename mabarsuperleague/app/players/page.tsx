@@ -4,14 +4,14 @@ import { PlayersBrowser } from "@/components/players/players-browser";
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
 import { api, type PublicPlayer } from "@/lib/admin/api";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getViewer } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
   title: "Players",
 };
 
 export default async function PlayersPage() {
-  const user = await getCurrentUser();
+  const user = await getViewer("/players");
 
   let players: PublicPlayer[] = [];
   try {

@@ -17,9 +17,6 @@ const navLinks = [
   { href: "/how-to-play", label: "HOW TO PLAY" },
 ];
 
-const navClass =
-  "text-[12.5px] font-bold tracking-[1.5px] text-white/45 transition-colors hover:text-white";
-
 export async function SiteHeader() {
   const user = await getCurrentUser();
 
@@ -46,15 +43,12 @@ export async function SiteHeader() {
               isAdmin={user.role === "admin"}
             />
           ) : (
-            <div className="hidden items-center gap-5 md:flex">
-              <Link href="/login" className={navClass}>
-                LOG IN
-              </Link>
+            <div className="hidden items-center md:flex">
               <Link
-                href="/register"
+                href="/login"
                 className="rounded-md bg-[#FFB800] px-4 py-2 text-[12.5px] font-extrabold tracking-[1.5px] text-[#0A0B0D] transition hover:brightness-110"
               >
-                SIGN UP
+                SIGN IN
               </Link>
             </div>
           )}

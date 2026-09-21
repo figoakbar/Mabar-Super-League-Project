@@ -93,16 +93,9 @@ export function MobileNav({
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className={`${itemClass} text-white/60 hover:text-white`}
-                >
-                  LOG IN
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setOpen(false)}
                   className={`${itemClass} border-b-0 text-[#FFB800] hover:brightness-110`}
                 >
-                  SIGN UP
+                  SIGN IN
                 </Link>
               </>
             )}

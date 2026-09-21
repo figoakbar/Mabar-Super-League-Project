@@ -4,7 +4,10 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { API_BASE_SERVER } from "@/lib/admin/api";
+import { COMPLETE_PROFILE_PATH } from "@/lib/auth/constants";
 import { getSessionToken } from "@/lib/auth/session";
+
+export type Provider = "google" | "discord";
 
 export type SessionUser = {
   id: string;
@@ -16,7 +19,10 @@ export type SessionUser = {
   pcId: string;
   instagram: string;
   avatarUrl: string;
-  hasPassword: boolean;
+  /** Which sign-in identities are bound to the account. */
+  providers: Provider[];
+  /** False until the mandatory first-sign-in profile step is done. */
+  profileComplete: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 };
@@ -25,6 +31,8 @@ export type SessionUser = {
  * Authoritative session check, run close to the data as the Next.js auth guide
  * recommends. `cache()` de-duplicates it across every component in one render,
  * so a page that checks auth in several places still makes one backend call.
+ * It never redirects itself — the helpers below decide that — so the cached
+ * value is a plain fact, not a thrown navigation.
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const token = await getSessionToken();
@@ -52,10 +60,37 @@ function signOutAndRedirect(next: string): never {
   redirect(`/api/auth/signout?expired=1&next=${encodeURIComponent(next)}`);
 }
 
-/** For pages that require any signed-in user. */
-export async function requireUser(next = "/"): Promise<SessionUser> {
+/** The profile step, remembering where the player was headed. */
+function onboardingPath(next: string): string {
+  return `${COMPLETE_PROFILE_PATH}?next=${encodeURIComponent(next)}`;
+}
+
+/**
+ * A valid session, complete or not. Only the profile step itself should use
+ * this — everything else wants `requireUser`, which also insists the player has
+ * finished that step.
+ */
+export async function requireSession(next = "/"): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) signOutAndRedirect(next);
+  return user;
+}
+
+/** For pages that require a signed-in player who has completed their profile. */
+export async function requireUser(next = "/"): Promise<SessionUser> {
+  const user = await requireSession(next);
+  if (!user.profileComplete) redirect(onboardingPath(next));
+  return user;
+}
+
+/**
+ * For pages a guest may read but a signed-in player should not wander around
+ * before finishing their profile: the user if any, redirected to the profile
+ * step when signed in but incomplete.
+ */
+export async function getViewer(next: string): Promise<SessionUser | null> {
+  const user = await getCurrentUser();
+  if (user && !user.profileComplete) redirect(onboardingPath(next));
   return user;
 }
 
@@ -65,8 +100,7 @@ export async function requireUser(next = "/"): Promise<SessionUser> {
  * clear and no reason to confirm what lives at this path.
  */
 export async function requireAdmin(): Promise<SessionUser> {
-  const user = await getCurrentUser();
-  if (!user) signOutAndRedirect("/admin");
+  const user = await requireUser("/admin");
   if (user.role !== "admin") redirect("/");
   return user;
 }

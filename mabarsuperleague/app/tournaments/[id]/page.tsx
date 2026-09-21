@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/shared/site-header";
 import { TournamentDetail } from "@/components/tournaments/tournament-detail";
 import { TournamentLive } from "@/components/tournaments/tournament-live";
 import { api, type TournamentDetail as TournamentDetailData } from "@/lib/admin/api";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getViewer } from "@/lib/auth/dal";
 
 async function loadTournament(
   id: string,
@@ -37,7 +37,7 @@ export default async function TournamentDetailPage({
   const tournament = await loadTournament(id);
   if (!tournament) notFound();
 
-  const user = await getCurrentUser();
+  const user = await getViewer(`/tournaments/${id}`);
   const username = user?.username ?? "Player";
 
   return (

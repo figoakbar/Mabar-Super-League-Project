@@ -18,7 +18,7 @@ const steps = [
     iconBg: "rgba(79,163,224,0.1)",
     delay: "0s",
     title: "Create your account",
-    text: "Sign up free with your email and a username, then add your gamer IDs (PSN, Xbox, Steam, Epic or Riot) so opponents can find you.",
+    text: "Sign in with Google or Discord — no password needed — then complete your profile with a username, phone number and your gamer IDs (PSN, Xbox, Steam, Epic or Riot) so opponents can find you.",
   },
   {
     n: "02",

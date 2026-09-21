@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
 import { ScrollLink } from "@/components/shared/scroll-link";
 import { TournamentBrowser } from "@/components/tournaments/tournament-browser";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getViewer } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
   title: "Tournaments",
@@ -109,7 +109,7 @@ function HeroArt() {
 }
 
 export default async function TournamentsPage() {
-  const user = await getCurrentUser();
+  const user = await getViewer("/tournaments");
   const username = user?.username ?? "Player";
 
   return (
