@@ -13,6 +13,25 @@ const pentagon =
 const star8 =
   "polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)" as const;
 
+/**
+ * Which OAuth variables are still empty, so a missing sign-in button explains
+ * itself instead of being a mystery. Development only, and it reports *whether*
+ * a value is set — never the value.
+ */
+function missingOAuthEnv(): string[] {
+  if (process.env.NODE_ENV === "production") return [];
+  return (
+    [
+      ["GOOGLE_CLIENT_ID", process.env.GOOGLE_CLIENT_ID],
+      ["GOOGLE_CLIENT_SECRET", process.env.GOOGLE_CLIENT_SECRET],
+      ["DISCORD_CLIENT_ID", process.env.DISCORD_CLIENT_ID],
+      ["DISCORD_CLIENT_SECRET", process.env.DISCORD_CLIENT_SECRET],
+    ] as const
+  )
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+}
+
 function RatingPill({ rating }: { rating: string }) {
   return (
     <div className="absolute right-[18px] top-[18px] flex items-center gap-[5px] rounded-full bg-black/35 px-3 py-[5px] text-[13px] font-extrabold text-white">
@@ -90,6 +109,7 @@ export default async function LoginPage({
           errorCode={error}
           googleEnabled={Boolean(process.env.GOOGLE_CLIENT_ID)}
           discordEnabled={Boolean(process.env.DISCORD_CLIENT_ID)}
+          missingEnv={missingOAuthEnv()}
         />
       </div>
 

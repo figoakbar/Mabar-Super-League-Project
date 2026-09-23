@@ -33,11 +33,14 @@ export function ProviderButtons({
   errorCode,
   googleEnabled,
   discordEnabled,
+  missingEnv,
 }: {
   next?: string;
   errorCode?: string;
   googleEnabled: boolean;
   discordEnabled: boolean;
+  /** Names of OAuth variables still empty. Development only — see login/page.tsx. */
+  missingEnv?: string[];
 }) {
   const error = errorCode ? (CODE_MESSAGES[errorCode] ?? "Sign-in failed. Please try again.") : null;
   const anyEnabled = googleEnabled || discordEnabled;
@@ -59,6 +62,25 @@ export function ProviderButtons({
       {!anyEnabled && (
         <p className="text-center text-[13px] font-semibold text-white/45">
           Sign-in isn&apos;t configured on this server yet.
+        </p>
+      )}
+
+      {missingEnv && missingEnv.length > 0 && (
+        <p
+          className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold leading-relaxed"
+          style={{
+            border: "1px dashed rgba(255,184,0,0.35)",
+            background: "rgba(255,184,0,0.07)",
+            color: "rgba(255,184,0,0.85)",
+          }}
+        >
+          <strong className="font-extrabold">DEV</strong> — still empty in{" "}
+          <code style={{ fontFamily: "monospace" }}>.env.local</code>:{" "}
+          <code style={{ fontFamily: "monospace" }}>
+            {missingEnv.join(", ")}
+          </code>
+          . Fill them in, then restart the dev server — Next only reads that
+          file at startup. This note never appears in production.
         </p>
       )}
 
