@@ -61,7 +61,13 @@ export default function RootLayout({
       lang="en"
       className={`${chakraPetch.variable} ${barlow.variable} ${pressStart.variable} ${baloo.variable} ${nunito.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      {/* Browser extensions (password managers, antivirus, translators) often
+          stamp attributes onto <body> before React hydrates, which trips a
+          hydration warning that is not ours. This only silences attribute
+          differences on <body> itself — mismatches inside the page still show. */}
+      <body className="flex min-h-full flex-col font-sans" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
