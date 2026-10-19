@@ -84,7 +84,7 @@ export function MobileNav({
                     type="submit"
                     className={`${itemClass} w-full cursor-pointer border-b-0 text-left text-[#FF8A80] hover:brightness-110`}
                   >
-                    LOG OUT
+                    SIGN OUT
                   </button>
                 </form>
               </>
