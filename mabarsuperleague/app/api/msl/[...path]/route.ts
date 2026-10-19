@@ -64,8 +64,17 @@ async function forward(req: NextRequest, path: string[]) {
 
   const body = await res.arrayBuffer();
   const out = new NextResponse(body, { status: res.status });
-  const type = res.headers.get("content-type");
-  if (type) out.headers.set("content-type", type);
+  // Content type plus the headers that keep a private file (a payment receipt)
+  // out of shared caches and stop the browser second-guessing its type.
+  for (const name of [
+    "content-type",
+    "cache-control",
+    "content-disposition",
+    "x-content-type-options",
+  ]) {
+    const value = res.headers.get(name);
+    if (value) out.headers.set(name, value);
+  }
   return out;
 }
 

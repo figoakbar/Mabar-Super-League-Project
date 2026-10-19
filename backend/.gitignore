@@ -20,6 +20,9 @@
 # misc
 .DS_Store
 
-# uploaded receipts (local dev)
+# uploaded avatars (local dev) — receipts live in /private
 /uploads/*
 !/uploads/.gitkeep
+
+# payment receipts — private, never served statically (src/participants/receipts.ts)
+/private/

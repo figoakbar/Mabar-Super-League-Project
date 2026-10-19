@@ -6,7 +6,9 @@ import type {
   Tournament,
 } from "@prisma/client";
 
+import type { PublicUser } from "../auth/auth.service";
 import { tournamentPoints } from "../leaderboard/points.util";
+import { presentParticipant } from "../participants/receipts";
 import { PrismaService } from "../prisma/prisma.service";
 import { SeasonsService } from "../seasons/seasons.service";
 import { CreateTournamentDto } from "./dto/create-tournament.dto";
@@ -75,7 +77,7 @@ export class TournamentsService {
     return rows.map((r: WithCount) => this.serialize(r));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewer?: PublicUser) {
     const row = await this.prisma.tournament.findUnique({
       where: { id },
       include: {
@@ -87,7 +89,12 @@ export class TournamentsService {
       },
     });
     if (!row) throw new NotFoundException(`Tournament ${id} not found`);
-    return this.serialize(row);
+    // This endpoint is public: receipts and contact details are shown only to
+    // an admin or to the entrant they belong to.
+    return {
+      ...this.serialize(row),
+      participants: row.participants.map((p) => presentParticipant(p, viewer)),
+    };
   }
 
   async create(dto: CreateTournamentDto) {

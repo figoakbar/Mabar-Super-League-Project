@@ -11,7 +11,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix("api");
 
-  // Uploaded payment receipts, served at /uploads/<file> (outside the /api prefix).
+  // Uploaded avatars, served at /uploads/<file> (outside the /api prefix). Payment
+  // receipts are private and never land here — see participants/receipts.ts.
   app.useStaticAssets(join(process.cwd(), "uploads"), { prefix: "/uploads" });
 
   const allowList = (process.env.CORS_ORIGIN ?? "http://localhost:3000")

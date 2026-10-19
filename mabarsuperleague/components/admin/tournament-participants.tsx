@@ -5,7 +5,7 @@ import { Check, FileText, Plus, Trash2, X } from "lucide-react";
 
 import {
   api,
-  API_ORIGIN,
+  API_BASE_BROWSER,
   type Participant,
   type Tournament,
 } from "@/lib/admin/api";
@@ -209,7 +209,7 @@ export function TournamentParticipants({
                   <td className="px-3 py-2.5">
                     {p.receiptUrl ? (
                       <a
-                        href={`${API_ORIGIN}${p.receiptUrl}`}
+                        href={`${API_BASE_BROWSER}${p.receiptUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-md border border-[#4FA3E0]/40 bg-[#4FA3E0]/10 px-2 py-0.5 text-[11px] font-extrabold text-[#4FA3E0] transition-colors hover:bg-[#4FA3E0]/20"

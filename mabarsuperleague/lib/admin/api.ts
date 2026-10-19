@@ -21,7 +21,7 @@ const onServer = typeof window === "undefined";
 
 export const API_BASE = onServer ? API_BASE_SERVER : API_BASE_BROWSER;
 
-/** Origin of the API, used to build URLs for uploaded files (/uploads/...). */
+/** Origin of the API, used to build URLs for uploaded avatars (/uploads/...). */
 export const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") ??
   "http://localhost:3001";
@@ -120,9 +120,17 @@ export type Participant = {
   id: string;
   team: string;
   captain: string;
-  contact: string;
   status: "pending" | "confirmed" | "rejected";
-  receiptUrl: string | null;
+  /** Whether a payment receipt was uploaded — visible to everyone. */
+  hasReceipt: boolean;
+  /** Admin or the entrant only; absent for everyone else. */
+  contact?: string;
+  /**
+   * Admin or the entrant only: an API path (`/participants/<id>/receipt`) that
+   * streams the receipt after checking the session. Open it through the
+   * browser proxy, `${API_BASE_BROWSER}${receiptUrl}`.
+   */
+  receiptUrl?: string | null;
   reviewedAt: string | null;
   tournamentId: string;
   createdAt: string;

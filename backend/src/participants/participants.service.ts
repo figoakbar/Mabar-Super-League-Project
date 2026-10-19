@@ -1,21 +1,25 @@
+import { existsSync } from "node:fs";
+
 import {
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 
+import type { PublicUser } from "../auth/auth.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateParticipantDto,
   UpdateParticipantDto,
 } from "./dto/participant.dto";
+import { presentParticipant, receiptPath } from "./receipts";
 
 @Injectable()
 export class ParticipantsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(tournamentId?: string, team?: string) {
-    return this.prisma.participant.findMany({
+  async findAll(tournamentId?: string, team?: string, viewer?: PublicUser) {
+    const rows = await this.prisma.participant.findMany({
       where: {
         ...(tournamentId ? { tournamentId } : {}),
         ...(team ? { team } : {}),
@@ -27,32 +31,36 @@ export class ParticipantsService {
         },
       },
     });
+    return rows.map((row) => presentParticipant(row, viewer));
   }
 
   /** `team` is required here: the controller fills it in from the session. */
-  async create(dto: CreateParticipantDto & { team: string }) {
+  async create(dto: CreateParticipantDto & { team: string }, viewer: PublicUser) {
     await this.ensureTournament(dto.tournamentId);
-    return this.prisma.participant.create({ data: dto });
+    const row = await this.prisma.participant.create({ data: dto });
+    return presentParticipant(row, viewer);
   }
 
-  async update(id: string, dto: UpdateParticipantDto) {
+  async update(id: string, dto: UpdateParticipantDto, viewer: PublicUser) {
     await this.ensureExists(id);
     // Reviewing (confirm/reject) stamps the review time.
     const reviewed =
       dto.status === "confirmed" || dto.status === "rejected"
         ? { reviewedAt: new Date() }
         : {};
-    return this.prisma.participant.update({
+    const row = await this.prisma.participant.update({
       where: { id },
       data: { ...dto, ...reviewed },
     });
+    return presentParticipant(row, viewer);
   }
 
   /**
-   * Attach an uploaded payment receipt. When `ownerTeam` is given the row must
-   * belong to that entrant, so one user cannot overwrite another's receipt.
+   * Attach an uploaded payment receipt. A player may only attach one to their
+   * own registration, so nobody can overwrite another entrant's receipt.
    */
-  async setReceipt(id: string, receiptUrl: string, ownerTeam?: string) {
+  async setReceipt(id: string, fileName: string, viewer: PublicUser) {
+    const ownerTeam = viewer.role === "admin" ? undefined : viewer.username;
     const found = await this.prisma.participant.findUnique({
       where: { id },
       select: { id: true, team: true },
@@ -61,10 +69,31 @@ export class ParticipantsService {
     if (ownerTeam !== undefined && found.team !== ownerTeam) {
       throw new ForbiddenException("This registration is not yours");
     }
-    return this.prisma.participant.update({
+    const row = await this.prisma.participant.update({
       where: { id },
-      data: { receiptUrl },
+      data: { receiptUrl: fileName },
     });
+    return presentParticipant(row, viewer);
+  }
+
+  /**
+   * Disk path of a registration's receipt, for an admin or the entrant only.
+   * Everyone else gets the same 404 as a registration without one, so the
+   * response does not confirm what exists.
+   */
+  async receiptFile(id: string, viewer: PublicUser): Promise<string> {
+    const found = await this.prisma.participant.findUnique({
+      where: { id },
+      select: { team: true, receiptUrl: true },
+    });
+    const allowed =
+      found && (viewer.role === "admin" || found.team === viewer.username);
+    if (!found || !allowed || !found.receiptUrl) {
+      throw new NotFoundException("Receipt not found");
+    }
+    const file = receiptPath(found.receiptUrl);
+    if (!existsSync(file)) throw new NotFoundException("Receipt not found");
+    return file;
   }
 
   async remove(id: string) {

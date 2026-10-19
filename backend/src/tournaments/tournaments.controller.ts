@@ -8,7 +8,8 @@ import {
   Post,
 } from "@nestjs/common";
 
-import { Public, Roles } from "../auth/auth.decorators";
+import { CurrentUser, Public, Roles } from "../auth/auth.decorators";
+import type { PublicUser } from "../auth/auth.service";
 
 import { CreateTournamentDto } from "./dto/create-tournament.dto";
 import { UpdateTournamentDto } from "./dto/update-tournament.dto";
@@ -26,8 +27,8 @@ export class TournamentsController {
 
   @Public()
   @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.tournaments.findOne(id);
+  findOne(@Param("id") id: string, @CurrentUser() user?: PublicUser) {
+    return this.tournaments.findOne(id, user);
   }
 
   @Roles("admin")
