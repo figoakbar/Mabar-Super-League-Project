@@ -25,6 +25,23 @@ export type GameRow = {
   prizePool: number;
 };
 
+/** One game in one month. */
+export type GameMonthRow = GameRow & { key: string };
+
+/** Collapse per-month game rows into one row per game, biggest earner first. */
+export function sumByGame(rows: GameMonthRow[]): GameRow[] {
+  const map = new Map<string, GameRow>();
+  for (const r of rows) {
+    const g = map.get(r.game) ?? { game: r.game, tournaments: 0, participants: 0, revenue: 0, prizePool: 0 };
+    g.tournaments += r.tournaments;
+    g.participants += r.participants;
+    g.revenue += r.revenue;
+    g.prizePool += r.prizePool;
+    map.set(r.game, g);
+  }
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+}
+
 /**
  * Everything is grouped by the month a tournament *starts*, not when the row was
  * created: a league is reported on by the season it runs in, and creation dates
@@ -92,26 +109,34 @@ export class ReportsService {
       .map((r) => ({ ...r, net: r.revenue - r.prizePool }))
       .sort((a, b) => a.key.localeCompare(b.key));
 
-    // Per-game totals, biggest earner first.
-    const gameMap = new Map<string, GameRow>();
-    const gameRow = (game: string): GameRow => {
-      if (!gameMap.has(game)) {
-        gameMap.set(game, { game, tournaments: 0, participants: 0, revenue: 0, prizePool: 0 });
+    // Per-game figures on the same start-month basis as everything else, so a
+    // year filter on the page narrows them exactly like the monthly table.
+    const cellMap = new Map<string, GameMonthRow>();
+    const cell = (key: string, game: string): GameMonthRow => {
+      const id = `${key}|${game}`;
+      if (!cellMap.has(id)) {
+        cellMap.set(id, { key, game, tournaments: 0, participants: 0, revenue: 0, prizePool: 0 });
       }
-      return gameMap.get(game)!;
+      return cellMap.get(id)!;
     };
     for (const t of tournaments) {
-      const g = gameRow(t.game || "Unknown");
-      g.tournaments += 1;
-      g.prizePool += t.prizePool;
+      const key = monthKey(t.startDate);
+      if (!key) continue;
+      const c = cell(key, t.game || "Unknown");
+      c.tournaments += 1;
+      c.prizePool += t.prizePool;
     }
     for (const p of participants) {
       if (p.status !== "confirmed") continue;
-      const g = gameRow(p.tournament?.game || "Unknown");
-      g.participants += 1;
-      g.revenue += p.tournament?.entryFee ?? 0;
+      const key = monthKey(p.tournament?.startDate ?? "");
+      if (!key) continue;
+      const c = cell(key, p.tournament?.game || "Unknown");
+      c.participants += 1;
+      c.revenue += p.tournament?.entryFee ?? 0;
     }
-    const byGame = [...gameMap.values()].sort((a, b) => b.revenue - a.revenue);
+    const byGameMonth = [...cellMap.values()].sort((a, b) => a.key.localeCompare(b.key));
+    // All-time per-game totals, biggest earner first.
+    const byGame = sumByGame(byGameMonth);
 
     // Current state, not tied to a month: what still needs an admin's attention.
     const pending = participants.filter((p) => p.status === "pending");
@@ -142,6 +167,6 @@ export class ReportsService {
       },
     );
 
-    return { months, byGame, totals, outstanding, users };
+    return { months, byGame, byGameMonth, totals, outstanding, users };
   }
 }

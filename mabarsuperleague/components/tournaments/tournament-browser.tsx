@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { isRegistrationClosed } from "@/lib/tournaments/registration";
+
 import {
   api,
   formatLabel,
@@ -84,7 +86,10 @@ export function TournamentBrowser({ username }: { username: string }) {
             // Tournaments list is scannable by tier at a glance.
             const accent = tierAccent(t.tier);
             const mine = myStatus[t.id];
+            // registeredTeams counts places held (pending + confirmed), the
+            // same rule the tournament page and the server use.
             const isFull = t.registeredTeams >= t.maxTeams;
+            const isClosed = isRegistrationClosed(t.registrationDeadline);
             const pct =
               t.maxTeams > 0
                 ? Math.round((t.registeredTeams / t.maxTeams) * 100)
@@ -94,9 +99,11 @@ export function TournamentBrowser({ username }: { username: string }) {
                 ? { label: "JOINED", color: "#6FCF97", bg: "rgba(111,207,151,0.14)" }
                 : mine === "pending"
                   ? { label: "PENDING", color: "#FFB800", bg: "rgba(255,184,0,0.14)" }
-                  : isFull
-                    ? { label: "FULL", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" }
-                    : { label: "OPEN", color: "#6FCF97", bg: "rgba(111,207,151,0.12)" };
+                  : isClosed
+                    ? { label: "CLOSED", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" }
+                    : isFull
+                      ? { label: "FULL", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" }
+                      : { label: "OPEN", color: "#6FCF97", bg: "rgba(111,207,151,0.12)" };
 
             return (
               <article
@@ -230,9 +237,9 @@ export function TournamentBrowser({ username }: { username: string }) {
                     >
                       Pending review
                     </Link>
-                  ) : isFull ? (
+                  ) : isClosed || isFull ? (
                     <div className="w-full rounded-[10px] border border-white/[0.08] bg-white/5 p-3 text-center font-display text-[14.5px] font-bold text-white/35">
-                      Bracket Full
+                      {isClosed ? "Registration Closed" : "Bracket Full"}
                     </div>
                   ) : (
                     <Link

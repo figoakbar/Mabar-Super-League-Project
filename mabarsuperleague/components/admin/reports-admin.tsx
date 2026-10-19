@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { api, type MonthlyReport, type MonthlyRow } from "@/lib/admin/api";
+import {
+  api,
+  type GameRow,
+  type MonthlyReport,
+  type MonthlyRow,
+} from "@/lib/admin/api";
 import { ErrorNote, Select } from "@/components/admin/ui";
 
 /*
@@ -436,6 +441,26 @@ function ParticipantsChart({ months }: { months: MonthlyRow[] }) {
 /* --------------------------------------------------------- game breakdown */
 
 /** Magnitude by identity → horizontal bars in a single hue, value at the tip. */
+/** Per-game totals over the months in view, biggest earner first. */
+function sumByGame(rows: MonthlyReport["byGameMonth"]): GameRow[] {
+  const map = new Map<string, GameRow>();
+  for (const r of rows) {
+    const g = map.get(r.game) ?? {
+      game: r.game,
+      tournaments: 0,
+      participants: 0,
+      revenue: 0,
+      prizePool: 0,
+    };
+    g.tournaments += r.tournaments;
+    g.participants += r.participants;
+    g.revenue += r.revenue;
+    g.prizePool += r.prizePool;
+    map.set(r.game, g);
+  }
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+}
+
 function GameBars({ rows }: { rows: MonthlyReport["byGame"] }) {
   const top = rows.slice(0, 6);
   const max = Math.max(1, ...top.map((r) => r.revenue));
@@ -518,6 +543,15 @@ export function ReportsAdmin() {
   const months = useMemo(
     () =>
       (data?.months ?? []).filter((m) => !year || m.key.startsWith(year)),
+    [data, year],
+  );
+
+  // Narrowed by the same year filter as the table, so the two always agree.
+  const byGame = useMemo(
+    () =>
+      sumByGame(
+        (data?.byGameMonth ?? []).filter((r) => !year || r.key.startsWith(year)),
+      ),
     [data, year],
   );
 
@@ -640,7 +674,7 @@ export function ReportsAdmin() {
           </div>
 
           <Card title="Entry fees by game" hint="Top games by money collected.">
-            <GameBars rows={data?.byGame ?? []} />
+            <GameBars rows={byGame} />
           </Card>
 
           {/* Table view — every value stays readable without a tooltip */}

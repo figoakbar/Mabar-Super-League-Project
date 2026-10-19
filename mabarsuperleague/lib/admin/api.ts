@@ -104,7 +104,10 @@ export type Tournament = {
   maxTeams: number;
   startDate: string;
   registrationDeadline: string;
+  /** Places taken: registrations awaiting review plus confirmed ones. */
   registeredTeams: number;
+  /** Confirmed players — the ones a draw puts into the bracket. */
+  confirmedTeams: number;
   /** How many matches exist — 0 means the draw hasn't been made yet. */
   matchCount: number;
   /** Season points each placement earns here (0 for exhibitions). */
@@ -253,9 +256,15 @@ export type GameRow = {
   prizePool: number;
 };
 
+/** One game in one month ("YYYY-MM"). */
+export type GameMonthRow = GameRow & { key: string };
+
 export type MonthlyReport = {
   months: MonthlyRow[];
+  /** All-time totals per game, biggest earner first. */
   byGame: GameRow[];
+  /** The same figures per month, so a year filter can narrow them. */
+  byGameMonth: GameMonthRow[];
   totals: Omit<MonthlyRow, "key">;
   outstanding: { pendingReview: number; pendingValue: number };
   users: number;
@@ -443,6 +452,32 @@ export const api = {
     request<{ id: string; deleted: boolean }>(`/participants/${id}`, {
       method: "DELETE",
     }),
+  /**
+   * Register the signed-in player, sending the payment receipt in the same
+   * request so a registration never exists without its proof. Free tournaments
+   * need no receipt.
+   */
+  register: async (tournamentId: string, receipt?: File | null) => {
+    const body = new FormData();
+    body.append("tournamentId", tournamentId);
+    if (receipt) body.append("receipt", receipt);
+    // No Content-Type header: the browser sets the multipart boundary.
+    const res = await fetch(`${API_BASE}/participants`, { method: "POST", body });
+    if (!res.ok) {
+      let message = `Registration failed (${res.status})`;
+      try {
+        const data = await res.json();
+        if (data?.message) {
+          message = Array.isArray(data.message) ? data.message.join(", ") : data.message;
+        }
+      } catch {
+        // keep default message
+      }
+      if (res.status === 413) message = "That file is larger than 5 MB — send a smaller screenshot.";
+      throw new Error(message);
+    }
+    return (await res.json()) as Participant;
+  },
   /** Upload a payment receipt (multipart) for a registration. */
   uploadReceipt: async (participantId: string, file: File) => {
     const body = new FormData();

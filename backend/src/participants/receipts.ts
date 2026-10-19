@@ -1,5 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { basename, join } from "node:path";
+
+import { BadRequestException } from "@nestjs/common";
+import type { MulterOptions } from "@nestjs/platform-express/multer/interfaces/multer-options.interface";
+import { diskStorage } from "multer";
 
 /**
  * Payment receipts are private: only the entrant and IAGL admins may see one
@@ -26,6 +31,24 @@ export function ensureReceiptsDir(): string {
   mkdirSync(RECEIPTS_DIR, { recursive: true });
   return RECEIPTS_DIR;
 }
+
+/**
+ * Multer settings for every receipt upload: private folder, 5 MB cap, and the
+ * file type checked before anything is written. A refused file never reaches
+ * the handler, so nothing is created for it.
+ */
+export const receiptUploadOptions: MulterOptions = {
+  storage: diskStorage({
+    destination: (_req, _file, cb) => cb(null, ensureReceiptsDir()),
+    filename: (_req, file, cb) =>
+      cb(null, `${randomUUID()}${RECEIPT_TYPES[file.mimetype]}`),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) =>
+    file.mimetype in RECEIPT_TYPES
+      ? cb(null, true)
+      : cb(new BadRequestException("Only JPG, PNG, WEBP, GIF or PDF"), false),
+};
 
 /**
  * Disk path of a stored receipt. New rows hold a bare file name; rows from

@@ -214,8 +214,8 @@ export function DrawingAdmin() {
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-white/[0.12] bg-[#101114] px-6 py-16">
           <p className="text-center text-sm font-semibold text-white/45">
             {isGroup
-              ? `${tournament?.registeredTeams ?? 0} confirmed players will be split into groups, each playing a round-robin.`
-              : `${tournament?.registeredTeams ?? 0} confirmed players will be paired into a knockout bracket.`}
+              ? `${tournament?.confirmedTeams ?? 0} confirmed players will be split into groups, each playing a round-robin.`
+              : `${tournament?.confirmedTeams ?? 0} confirmed players will be paired into a knockout bracket.`}
           </p>
           <button
             type="button"

@@ -16,6 +16,10 @@ import {
   formatDate,
   rupiah,
 } from "@/lib/data/tournament-view";
+import {
+  isRegistrationClosed,
+  receiptProblem,
+} from "@/lib/tournaments/registration";
 
 type MyStatus = "none" | "pending" | "confirmed" | "rejected";
 
@@ -73,6 +77,7 @@ export function TournamentDetail({
 }) {
   const [copied, setCopied] = useState(false);
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -105,15 +110,11 @@ export function TournamentDetail({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      // 1. Register the player, 2. attach the payment receipt for admin review.
-      const participant = await api.createParticipant({
-        tournamentId: t.id,
-        team: username,
-        captain: username,
-        status: "pending",
-      });
-      if (receipt) await api.uploadReceipt(participant.id, receipt);
-      setMyStatus("pending");
+      // One request carries the registration and its receipt, so a refused
+      // receipt leaves nothing behind. A free tournament needs no receipt and
+      // comes back already confirmed.
+      const participant = await api.register(t.id, isFree ? null : receipt);
+      setMyStatus(participant.status);
       await refreshRoster();
     } catch (e) {
       setSubmitError(
@@ -156,10 +157,20 @@ export function TournamentDetail({
 
   const prizeTotal = t.prizePool;
   const slots = t.maxTeams;
-  const filled = roster.filter((p) => p.status === "confirmed").length;
+  // A place is held by every registration that isn't rejected — the same count
+  // the tournament list and the server use to decide "full".
+  const filled = activeRoster.length;
   const fillPct = slots > 0 ? Math.round((filled / slots) * 100) : 0;
   const slotsLeft = Math.max(0, slots - filled);
-  const canSubmit = !!fileName && agreed && !submitted;
+  const isFree = t.entryFee === 0;
+  const closed = isRegistrationClosed(t.registrationDeadline);
+  const full = filled >= slots;
+  const canSubmit =
+    agreed &&
+    !submitted &&
+    !closed &&
+    !full &&
+    (isFree || (!!receipt && !receiptError));
 
   function copyAccount() {
     navigator.clipboard?.writeText("883009123456");
@@ -384,10 +395,18 @@ export function TournamentDetail({
               </h2>
               <span className="text-[13px] font-semibold text-white/45">
                 {myStatus === "confirmed"
-                  ? "You're in! Your payment has been verified by an admin."
+                  ? isFree
+                    ? "You're in! See you on the bracket."
+                    : "You're in! Your payment has been verified by an admin."
                   : myStatus === "pending"
                     ? "We've received your registration — your payment is being verified."
-                    : "Transfer the entry fee, then upload your payment receipt below. Admin verifies within 1×24 hours."}
+                    : closed
+                      ? "Registration for this tournament has closed."
+                      : full
+                        ? "This bracket is full."
+                        : isFree
+                          ? "This tournament is free — accept the rulebook and you're in."
+                          : "Transfer the entry fee, then upload your payment receipt below. Admin verifies within 1×24 hours."}
               </span>
             </div>
 
@@ -401,8 +420,9 @@ export function TournamentDetail({
                     Tournament joined
                   </span>
                   <span className="text-[13px] font-semibold text-white/55">
-                    Your payment is verified — you&apos;re an official
-                    participant. See you on the bracket.
+                    {isFree
+                      ? "You're an official participant. See you on the bracket."
+                      : "Your payment is verified — you're an official participant. See you on the bracket."}
                   </span>
                 </div>
               </div>
@@ -423,10 +443,26 @@ export function TournamentDetail({
               <>
                 {myStatus === "rejected" && (
                   <div className="rounded-[10px] border border-[#E07A72]/30 bg-[#E07A72]/10 px-4 py-2.5 text-[13px] font-semibold text-[#E07A72]">
-                    Your previous payment couldn&apos;t be verified. Please
-                    transfer again and re-upload a valid receipt.
+                    {closed || full
+                      ? "Your previous registration couldn't be verified."
+                      : "Your previous payment couldn't be verified. Please transfer again and re-upload a valid receipt."}
                   </div>
                 )}
+                {closed || full ? (
+                  <div className="rounded-xl border border-white/[0.1] bg-white/[0.03] px-[18px] py-5">
+                    <span className="block font-display text-[15px] font-extrabold text-white">
+                      {closed ? "Registration closed" : "Bracket full"}
+                    </span>
+                    <span className="mt-0.5 block text-[13px] font-semibold text-white/55">
+                      {closed
+                        ? `Registration closed on ${regEnds}. Keep an eye on the tournaments page for the next one.`
+                        : `All ${slots} places are taken. A place opens up again if a registration is rejected.`}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                {!isFree && (
+                  <>
                 {/* Step 1 */}
                 <div className="flex flex-col gap-2.5">
                   <span className="text-xs font-extrabold tracking-[1px] text-white/40">
@@ -496,7 +532,12 @@ export function TournamentDetail({
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) setReceipt(f);
+                      // Clear the input so picking the same file again re-runs this.
+                      e.target.value = "";
+                      if (!f) return;
+                      const problem = receiptProblem(f);
+                      setReceiptError(problem);
+                      setReceipt(problem ? null : f);
                     }}
                   />
                 </label>
@@ -515,14 +556,24 @@ export function TournamentDetail({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setReceipt(null)}
+                    onClick={() => {
+                      setReceipt(null);
+                      setReceiptError(null);
+                    }}
                     className="cursor-pointer px-2 py-1 text-xs font-extrabold text-white/40 transition-colors hover:text-[#FF8A80]"
                   >
                     Remove
                   </button>
                 </div>
               )}
+              {receiptError && (
+                <span className="text-xs font-bold text-[#E07A72]">
+                  {receiptError}
+                </span>
+              )}
             </div>
+                  </>
+                )}
 
                 {/* Agreement + submit */}
                 <label
@@ -568,6 +619,8 @@ export function TournamentDetail({
                 >
                   {submitting ? "Submitting…" : "Submit Registration"}
                 </button>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -624,7 +677,8 @@ export function TournamentDetail({
               />
             </div>
             <span className="text-[12.5px] font-bold text-white/45">
-              {slotsLeft} slots remaining — closes automatically when full.
+              {slotsLeft} slots remaining — a registration awaiting review
+              holds its place until an admin decides.
             </span>
             <div className="mt-1 flex flex-col">
               {activeRoster.length === 0 ? (

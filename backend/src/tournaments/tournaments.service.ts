@@ -9,13 +9,17 @@ import type {
 import type { PublicUser } from "../auth/auth.service";
 import { tournamentPoints } from "../leaderboard/points.util";
 import { presentParticipant } from "../participants/receipts";
+import { isActive } from "../participants/registration-rules";
 import { PrismaService } from "../prisma/prisma.service";
 import { SeasonsService } from "../seasons/seasons.service";
 import { CreateTournamentDto } from "./dto/create-tournament.dto";
 import { ScheduleItemDto } from "./dto/schedule-item.dto";
 import { UpdateTournamentDto } from "./dto/update-tournament.dto";
 
-type Counts = { participants: number; matches: number };
+type Counts = { matches: number };
+/** Places taken (pending + confirmed) and places confirmed, per tournament. */
+type EntryCounts = { registered: number; confirmed: number };
+const NO_ENTRIES: EntryCounts = { registered: 0, confirmed: 0 };
 type SeasonRef = { id: string; name: string } | null;
 type WithCount = Tournament & {
   _count?: Counts;
@@ -49,9 +53,32 @@ export class TournamentsService {
     private readonly seasons: SeasonsService,
   ) {}
 
-  private serialize(t: WithRelations) {
+  /**
+   * Entry counts for many tournaments in one query. Rejected registrations hold
+   * no place, so they count towards neither number.
+   */
+  private async entryCounts(ids: string[]): Promise<Map<string, EntryCounts>> {
+    const groups = await this.prisma.participant.groupBy({
+      by: ["tournamentId", "status"],
+      where: { tournamentId: { in: ids } },
+      _count: { _all: true },
+    });
+    const map = new Map<string, EntryCounts>();
+    for (const g of groups) {
+      const c = map.get(g.tournamentId) ?? { ...NO_ENTRIES };
+      if (isActive(g.status)) c.registered += g._count._all;
+      if (g.status === "confirmed") c.confirmed += g._count._all;
+      map.set(g.tournamentId, c);
+    }
+    return map;
+  }
+
+  private serialize(t: WithRelations, entries: EntryCounts = NO_ENTRIES) {
     const { _count, ...rest } = t;
-    const registeredTeams = _count?.participants ?? t.participants?.length ?? 0;
+    // Places taken — what "x / y slots filled" and "Bracket Full" are based on.
+    const registeredTeams = entries.registered;
+    // Who will actually be drawn into the bracket.
+    const confirmedTeams = entries.confirmed;
     // matchCount lets the frontend tell a "drawn" tournament from an undrawn one.
     const matchCount = _count?.matches ?? t.matches?.length ?? 0;
     // What each placement is worth here, from the tier + bracket size — so the
@@ -62,7 +89,7 @@ export class TournamentsService {
       runnerUp: tournamentPoints({ wonFinal: false, lostRound: "Final", playedAny: true }, rest.tier, field),
       semifinal: tournamentPoints({ wonFinal: false, lostRound: "Semifinals", playedAny: true }, rest.tier, field),
     };
-    return { ...rest, registeredTeams, matchCount, seasonPoints };
+    return { ...rest, registeredTeams, confirmedTeams, matchCount, seasonPoints };
   }
 
   async findAll() {
@@ -71,10 +98,11 @@ export class TournamentsService {
       include: {
         schedule: { orderBy: { position: "asc" } },
         season: { select: { id: true, name: true } },
-        _count: { select: { participants: true, matches: true } },
+        _count: { select: { matches: true } },
       },
     });
-    return rows.map((r: WithCount) => this.serialize(r));
+    const counts = await this.entryCounts(rows.map((r) => r.id));
+    return rows.map((r: WithCount) => this.serialize(r, counts.get(r.id)));
   }
 
   async findOne(id: string, viewer?: PublicUser) {
@@ -85,14 +113,15 @@ export class TournamentsService {
         matches: { orderBy: { createdAt: "asc" } },
         schedule: { orderBy: { position: "asc" } },
         season: { select: { id: true, name: true } },
-        _count: { select: { participants: true, matches: true } },
+        _count: { select: { matches: true } },
       },
     });
     if (!row) throw new NotFoundException(`Tournament ${id} not found`);
     // This endpoint is public: receipts and contact details are shown only to
     // an admin or to the entrant they belong to.
+    const counts = await this.entryCounts([id]);
     return {
-      ...this.serialize(row),
+      ...this.serialize(row, counts.get(id)),
       participants: row.participants.map((p) => presentParticipant(p, viewer)),
     };
   }
@@ -116,9 +145,10 @@ export class TournamentsService {
       include: {
         schedule: { orderBy: { position: "asc" } },
         season: { select: { id: true, name: true } },
-        _count: { select: { participants: true, matches: true } },
+        _count: { select: { matches: true } },
       },
     });
+    // A brand-new tournament has no registrations yet.
     return this.serialize(row);
   }
 
@@ -144,10 +174,11 @@ export class TournamentsService {
       include: {
         schedule: { orderBy: { position: "asc" } },
         season: { select: { id: true, name: true } },
-        _count: { select: { participants: true, matches: true } },
+        _count: { select: { matches: true } },
       },
     });
-    return this.serialize(row);
+    const counts = await this.entryCounts([id]);
+    return this.serialize(row, counts.get(id));
   }
 
   async remove(id: string) {

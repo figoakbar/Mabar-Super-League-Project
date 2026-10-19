@@ -1,10 +1,13 @@
 import { existsSync } from "node:fs";
 
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import type { PublicUser } from "../auth/auth.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -13,6 +16,13 @@ import {
   UpdateParticipantDto,
 } from "./dto/participant.dto";
 import { presentParticipant, receiptPath } from "./receipts";
+import {
+  ACTIVE_STATUSES,
+  isActive,
+  isRegistrationClosed,
+} from "./registration-rules";
+
+type Tx = Prisma.TransactionClient;
 
 @Injectable()
 export class ParticipantsService {
@@ -34,23 +44,104 @@ export class ParticipantsService {
     return rows.map((row) => presentParticipant(row, viewer));
   }
 
-  /** `team` is required here: the controller fills it in from the session. */
-  async create(dto: CreateParticipantDto & { team: string }, viewer: PublicUser) {
-    await this.ensureTournament(dto.tournamentId);
-    const row = await this.prisma.participant.create({ data: dto });
+  /**
+   * Take a place in a tournament.
+   *
+   * A player registers only themselves, only while registration is open, only
+   * once, and — for a paid tournament — together with the payment receipt, so
+   * a registration never exists without its proof. A free tournament has no
+   * payment to verify, so the place is confirmed straight away.
+   *
+   * An admin seeding a bracket by hand skips those checks. Nobody, admin
+   * included, can take a place in a bracket that is already full.
+   */
+  async create(
+    dto: CreateParticipantDto & { team: string },
+    viewer: PublicUser,
+    receipt?: string,
+  ) {
+    const isAdmin = viewer.role === "admin";
+    const row = await this.prisma.$transaction(async (tx) => {
+      const t = await tx.tournament.findUnique({
+        where: { id: dto.tournamentId },
+        select: {
+          name: true,
+          status: true,
+          registrationDeadline: true,
+          maxTeams: true,
+          entryFee: true,
+        },
+      });
+      if (!t) throw new NotFoundException(`Tournament ${dto.tournamentId} not found`);
+
+      let status = dto.status ?? "pending";
+      if (!isAdmin) {
+        if (t.status !== "open") {
+          throw new BadRequestException("Registration is not open for this tournament");
+        }
+        if (isRegistrationClosed(t.registrationDeadline)) {
+          throw new BadRequestException("Registration for this tournament has closed");
+        }
+        const existing = await tx.participant.count({
+          where: {
+            tournamentId: dto.tournamentId,
+            team: dto.team,
+            status: { in: [...ACTIVE_STATUSES] },
+          },
+        });
+        if (existing > 0) {
+          throw new ConflictException("You're already registered for this tournament");
+        }
+        if (t.entryFee > 0 && !receipt) {
+          throw new BadRequestException("Upload your payment receipt to register");
+        }
+        status = t.entryFee > 0 ? "pending" : "confirmed";
+      }
+
+      if (isActive(status)) await this.assertPlaceFree(tx, dto.tournamentId, t.maxTeams);
+      if (status === "confirmed") {
+        await this.assertConfirmable(tx, dto.tournamentId, t.maxTeams);
+      }
+
+      return tx.participant.create({
+        data: { ...dto, status, receiptUrl: receipt ?? null },
+      });
+    });
     return presentParticipant(row, viewer);
   }
 
   async update(id: string, dto: UpdateParticipantDto, viewer: PublicUser) {
-    await this.ensureExists(id);
-    // Reviewing (confirm/reject) stamps the review time.
-    const reviewed =
-      dto.status === "confirmed" || dto.status === "rejected"
-        ? { reviewedAt: new Date() }
-        : {};
-    const row = await this.prisma.participant.update({
-      where: { id },
-      data: { ...dto, ...reviewed },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const found = await tx.participant.findUnique({
+        where: { id },
+        select: {
+          status: true,
+          tournamentId: true,
+          tournament: { select: { maxTeams: true } },
+        },
+      });
+      if (!found) throw new NotFoundException(`Participant ${id} not found`);
+
+      // Re-admitting a rejected entry takes a place again; confirming one
+      // must not push the bracket past its size.
+      const next = dto.status;
+      if (next && next !== found.status) {
+        const max = found.tournament.maxTeams;
+        if (isActive(next) && !isActive(found.status)) {
+          await this.assertPlaceFree(tx, found.tournamentId, max);
+        }
+        if (next === "confirmed") {
+          await this.assertConfirmable(tx, found.tournamentId, max, id);
+        }
+      }
+
+      // Reviewing (confirm/reject) stamps the review time.
+      const reviewed =
+        next === "confirmed" || next === "rejected" ? { reviewedAt: new Date() } : {};
+      return tx.participant.update({
+        where: { id },
+        data: { ...dto, ...reviewed },
+      });
     });
     return presentParticipant(row, viewer);
   }
@@ -102,6 +193,39 @@ export class ParticipantsService {
     return { id, deleted: true };
   }
 
+  /** A place is free while pending + confirmed registrations are below the size. */
+  private async assertPlaceFree(tx: Tx, tournamentId: string, maxTeams: number) {
+    const taken = await tx.participant.count({
+      where: { tournamentId, status: { in: [...ACTIVE_STATUSES] } },
+    });
+    if (taken >= maxTeams) {
+      throw new ConflictException(
+        `This bracket is full (${taken} of ${maxTeams} places taken)`,
+      );
+    }
+  }
+
+  /** Confirmed players can never outnumber the bracket. */
+  private async assertConfirmable(
+    tx: Tx,
+    tournamentId: string,
+    maxTeams: number,
+    exceptId?: string,
+  ) {
+    const confirmed = await tx.participant.count({
+      where: {
+        tournamentId,
+        status: "confirmed",
+        ...(exceptId ? { id: { not: exceptId } } : {}),
+      },
+    });
+    if (confirmed >= maxTeams) {
+      throw new ConflictException(
+        `This bracket already has ${maxTeams} confirmed ${maxTeams === 1 ? "player" : "players"}`,
+      );
+    }
+  }
+
   private async ensureExists(id: string) {
     const found = await this.prisma.participant.findUnique({
       where: { id },
@@ -110,11 +234,4 @@ export class ParticipantsService {
     if (!found) throw new NotFoundException(`Participant ${id} not found`);
   }
 
-  private async ensureTournament(id: string) {
-    const found = await this.prisma.tournament.findUnique({
-      where: { id },
-      select: { id: true },
-    });
-    if (!found) throw new NotFoundException(`Tournament ${id} not found`);
-  }
 }
