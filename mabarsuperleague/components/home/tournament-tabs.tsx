@@ -129,22 +129,41 @@ const STATUS = {
     statusColor: "#C7CEDC",
     note: "This tournament has finished.",
   },
+  // A registration still awaiting review when the tournament moved on: the
+  // player never made the bracket, so neither "Pending" nor "Completed" is true.
+  unconfirmedLive: {
+    status: "Not confirmed",
+    statusBg: "rgba(224,160,79,0.12)",
+    statusColor: "#E0A04F",
+    note: "The tournament started before your payment was verified. Contact an admin.",
+  },
+  unconfirmedDone: {
+    status: "Not confirmed",
+    statusBg: "rgba(224,160,79,0.12)",
+    statusColor: "#E0A04F",
+    note: "Your payment was never verified, so you didn't take part. Contact an admin about a refund.",
+  },
 };
 
 function toEntry(r: Participant): TournamentEntry {
   const game = r.tournament?.game ?? "Tournament";
   const tier = r.tournament?.tier ?? "minor";
   const tStatus = r.tournament?.status;
-  // A confirmed player sees "Ongoing" once the tournament is live, "Joined"
-  // while it's still before kickoff; pending stays pending; finished shows done.
-  const style =
-    tStatus === "completed"
+  // Confirmed: "Joined" before kickoff, "Ongoing" while live, "Completed" once
+  // finished. Still awaiting review: "Pending" while it can still be decided,
+  // "Not confirmed" once the tournament has started or finished without it.
+  const confirmed = r.status === "confirmed";
+  const style = confirmed
+    ? tStatus === "completed"
       ? STATUS.completed
-      : r.status !== "confirmed"
-        ? STATUS.pending
-        : tStatus === "ongoing"
-          ? STATUS.ongoing
-          : STATUS.joined;
+      : tStatus === "ongoing"
+        ? STATUS.ongoing
+        : STATUS.joined
+    : tStatus === "completed"
+      ? STATUS.unconfirmedDone
+      : tStatus === "ongoing"
+        ? STATUS.unconfirmedLive
+        : STATUS.pending;
   return {
     tid: r.tournamentId,
     // Strip colour + label reflect the tournament tier (minor / major /

@@ -21,6 +21,13 @@ const filterLabel: Record<StatusFilter, string> = {
   all: "All",
 };
 
+/** How a tournament that no longer takes registrations is flagged on a row. */
+const closedLabel: Record<string, string> = {
+  closed: "Registration closed",
+  ongoing: "Tournament live",
+  completed: "Tournament finished",
+};
+
 function formatWhen(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("id-ID", {
@@ -76,18 +83,32 @@ export function RegistrationsAdmin() {
     };
   }, []);
 
-  // Only tournaments still open for registration are reviewed here.
-  const openTournaments = tournaments.filter((t) => t.status === "open");
-  const openIds = new Set(openTournaments.map((t) => t.id));
+  // Confirmed and rejected entries are listed for open tournaments only, but a
+  // registration awaiting review is always listed, whatever its tournament's
+  // status — otherwise it drops out of sight the moment registration closes and
+  // the player is left waiting for a decision that never comes.
+  const openIds = new Set(
+    tournaments.filter((t) => t.status === "open").map((t) => t.id),
+  );
+  const inScope = (p: Participant) =>
+    p.status === "pending" || openIds.has(p.tournamentId);
+  const isStale = (p: Participant) =>
+    p.status === "pending" && !openIds.has(p.tournamentId);
 
-  const shown = rows
-    .filter((p) => openIds.has(p.tournamentId))
+  const scoped = rows.filter(inScope);
+  const filterTournaments = tournaments.filter(
+    (t) => openIds.has(t.id) || scoped.some((p) => p.tournamentId === t.id),
+  );
+
+  const shown = scoped
     .filter((p) => (status === "all" ? true : p.status === status))
-    .filter((p) => (tournamentId ? p.tournamentId === tournamentId : true));
+    .filter((p) => (tournamentId ? p.tournamentId === tournamentId : true))
+    // Overdue reviews first: they block a draw or a refund.
+    .sort((a, b) => Number(isStale(b)) - Number(isStale(a)));
 
-  const pendingCount = rows.filter(
-    (p) => openIds.has(p.tournamentId) && p.status === "pending",
-  ).length;
+  // Same number as the report's "Awaiting review" tile.
+  const pendingCount = rows.filter((p) => p.status === "pending").length;
+  const staleCount = rows.filter(isStale).length;
 
   async function review(p: Participant, next: "confirmed" | "rejected") {
     setBusy(p.id);
@@ -110,8 +131,9 @@ export function RegistrationsAdmin() {
             Registrations
           </h1>
           <p className="mt-1 text-sm font-semibold text-white/45">
-            Review payment proofs for tournaments that are open for
-            registration. Confirming makes the player an official participant.
+            Review payment proofs. Confirming makes the player an official
+            participant. Every registration awaiting review is listed —
+            including ones in tournaments that have already closed.
           </p>
         </div>
         {pendingCount > 0 && (
@@ -120,6 +142,24 @@ export function RegistrationsAdmin() {
           </span>
         )}
       </div>
+
+      {staleCount > 0 && (
+        <p
+          role="status"
+          className="rounded-xl px-4 py-3 text-[13px] font-semibold"
+          style={{
+            border: "1px solid rgba(224,160,79,0.35)",
+            background: "rgba(224,160,79,0.08)",
+            color: "#E0A04F",
+          }}
+        >
+          {staleCount === 1
+            ? "1 registration is still awaiting review in a tournament that no longer takes registrations."
+            : `${staleCount} registrations are still awaiting review in tournaments that no longer take registrations.`}{" "}
+          Confirm or reject them before the draw — a rejected player is owed a
+          refund.
+        </p>
+      )}
 
       <ErrorNote message={error} />
 
@@ -139,14 +179,15 @@ export function RegistrationsAdmin() {
         </div>
         <div className="w-full sm:w-80">
           <Select
-            label="OPEN TOURNAMENT"
+            label="TOURNAMENT"
             value={tournamentId}
             onChange={(e) => setTournamentId(e.target.value)}
           >
-            <option value="">All open tournaments</option>
-            {openTournaments.map((t) => (
+            <option value="">All tournaments</option>
+            {filterTournaments.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
+                {t.status === "open" ? "" : ` (${closedLabel[t.status] ?? t.status})`}
               </option>
             ))}
           </Select>
@@ -196,6 +237,17 @@ export function RegistrationsAdmin() {
                   </td>
                   <td className="px-5 py-3.5 text-sm font-semibold text-white/60">
                     {p.tournament?.name ?? "—"}
+                    {isStale(p) && (
+                      <span
+                        className="mt-1 block w-fit rounded px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.5px]"
+                        style={{
+                          background: "rgba(224,160,79,0.12)",
+                          color: "#E0A04F",
+                        }}
+                      >
+                        {closedLabel[p.tournament?.status ?? ""] ?? "Not open"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     {p.receiptUrl ? (
