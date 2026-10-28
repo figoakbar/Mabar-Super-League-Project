@@ -92,13 +92,19 @@ export class ParticipantsService {
         if (existing > 0) {
           throw new ConflictException("You're already registered for this tournament");
         }
+        // Say "full" before asking for a receipt, so nobody pays for a place
+        // that isn't there.
+        await this.assertPlaceFree(tx, dto.tournamentId, t.maxTeams);
         if (t.entryFee > 0 && !receipt) {
           throw new BadRequestException("Upload your payment receipt to register");
         }
         status = t.entryFee > 0 ? "pending" : "confirmed";
       }
 
-      if (isActive(status)) await this.assertPlaceFree(tx, dto.tournamentId, t.maxTeams);
+      // A player's place was checked above; an admin adding by hand is checked here.
+      if (isAdmin && isActive(status)) {
+        await this.assertPlaceFree(tx, dto.tournamentId, t.maxTeams);
+      }
       if (status === "confirmed") {
         await this.assertConfirmable(tx, dto.tournamentId, t.maxTeams);
       }
