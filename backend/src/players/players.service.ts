@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../prisma/prisma.service";
-import { tournamentPoints } from "../leaderboard/points.util";
+import {
+  bestRacePositions,
+  racePlacement,
+  tournamentPoints,
+} from "../leaderboard/points.util";
 
 /** A public-safe player card, with stats derived from real match history. */
 export type PublicPlayer = {
@@ -29,6 +33,8 @@ type PerTournament = {
   losses: number;
   lostRound: string | null;
   wonFinal: boolean;
+  /** Racing only: best classified position in the race session. */
+  racePosition: number | null;
 };
 
 type Aggregate = {
@@ -57,6 +63,8 @@ function formatDate(s: string): string {
 
 function resultLabel(t: PerTournament): string {
   if (t.wonFinal) return "Champion";
+  if (t.racePosition === 2) return "Runner-up";
+  if (t.racePosition) return `P${t.racePosition}`;
   if (t.lostRound === "Final") return "Runner-up";
   if (t.lostRound === "Semifinals") return "Semifinal";
   if (t.lostRound === "Quarterfinals") return "Quarterfinal";
@@ -76,7 +84,7 @@ export class PlayersService {
    * match/participant. Only public-safe fields are ever exposed.
    */
   async findAll(): Promise<PublicPlayer[]> {
-    const [users, matches, participants] = await Promise.all([
+    const [users, matches, participants, raceResults] = await Promise.all([
       this.prisma.user.findMany({
         select: { username: true, avatarUrl: true, createdAt: true },
       }),
@@ -97,6 +105,18 @@ export class PlayersService {
         where: { status: "confirmed" },
         select: {
           team: true,
+          tournament: {
+            select: { id: true, name: true, game: true, startDate: true, status: true, tier: true },
+          },
+        },
+      }),
+      // Racing has no matches: the race session's positions are the result.
+      this.prisma.raceResult.findMany({
+        where: { session: "race", position: { not: null }, tournament: { format: "racing" } },
+        select: {
+          driver: true,
+          session: true,
+          position: true,
           tournament: {
             select: { id: true, name: true, game: true, startDate: true, status: true, tier: true },
           },
@@ -148,6 +168,7 @@ export class PlayersService {
         losses: 0,
         lostRound: null,
         wonFinal: false,
+        racePosition: null,
       };
       a.tournaments.set(t.id, created);
       return created;
@@ -158,6 +179,27 @@ export class PlayersService {
       const a = agg.get(p.team);
       if (!a || p.tournament.tier === "exhibition") continue;
       ensureTournament(a, p.tournament);
+    }
+
+    // Race results place drivers in racing tournaments (a P1 is a trophy).
+    const raceByTournament = new Map<string, typeof raceResults>();
+    for (const r of raceResults) {
+      const list = raceByTournament.get(r.tournament.id) ?? [];
+      list.push(r);
+      raceByTournament.set(r.tournament.id, list);
+    }
+    for (const list of raceByTournament.values()) {
+      const t = list[0].tournament;
+      if (t.tier === "exhibition") continue;
+      for (const [driver, position] of bestRacePositions(list)) {
+        const a = agg.get(driver);
+        if (!a) continue;
+        const pt = ensureTournament(a, t);
+        const placed = racePlacement(position);
+        pt.racePosition = position;
+        pt.wonFinal = placed.wonFinal;
+        pt.lostRound = placed.lostRound;
+      }
     }
 
     // Completed matches supply wins / losses and per-tournament results.
@@ -205,18 +247,21 @@ export class PlayersService {
               {
                 wonFinal: t.wonFinal,
                 lostRound: t.lostRound,
-                playedAny: t.wins + t.losses > 0,
+                playedAny: t.wins + t.losses > 0 || t.racePosition != null,
               },
               t.tier,
               fieldCount.get(tid) ?? 0,
             ),
         );
       }
-      const records = [...a.perGame.entries()]
-        .map(([game, r]) => ({
+      // Racing games earn points without any wins or losses, so list every
+      // game that has either.
+      const recordGames = new Set([...a.perGame.keys(), ...gamePoints.keys()]);
+      const records = [...recordGames]
+        .map((game) => ({
           game,
-          w: r.w,
-          l: r.l,
+          w: a.perGame.get(game)?.w ?? 0,
+          l: a.perGame.get(game)?.l ?? 0,
           points: gamePoints.get(game) ?? 0,
         }))
         .sort((x, y) => y.w + y.l - (x.w + x.l));

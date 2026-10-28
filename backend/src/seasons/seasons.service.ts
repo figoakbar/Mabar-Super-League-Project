@@ -220,6 +220,11 @@ export class SeasonsService {
         select: {
           game: true,
           tier: true,
+          format: true,
+          raceResults: {
+            where: { session: "race", position: { not: null } },
+            select: { driver: true, session: true, position: true },
+          },
           participants: {
             where: { status: "confirmed" },
             select: { team: true },

@@ -1,4 +1,8 @@
-import { tournamentPoints } from "./points.util";
+import {
+  bestRacePositions,
+  racePlacement,
+  tournamentPoints,
+} from "./points.util";
 
 /** One ranked row on a season leaderboard. */
 export type LeaderboardEntry = {
@@ -15,6 +19,9 @@ export type LeaderboardEntry = {
 export type StandingsTournament = {
   game: string;
   tier: string;
+  /** "racing" places drivers by their race-session position, not by matches. */
+  format?: string;
+  raceResults?: { driver: string; session: string; position: number | null }[];
   participants: { team: string }[];
   matches: {
     teamA: string;
@@ -83,6 +90,18 @@ export function aggregateSeason(
     };
 
     for (const p of t.participants) if (userSet.has(p.team)) ensurePT(p.team);
+
+    if (t.format === "racing") {
+      // No head-to-head matches: the race result is the placement.
+      for (const [driver, position] of bestRacePositions(t.raceResults ?? [])) {
+        if (!userSet.has(driver)) continue;
+        const p = ensurePT(driver);
+        const placed = racePlacement(position);
+        p.wonFinal = placed.wonFinal;
+        p.lostRound = placed.lostRound;
+        p.playedAny = placed.playedAny;
+      }
+    }
 
     for (const m of t.matches) {
       const sides: [string, number, number][] = [

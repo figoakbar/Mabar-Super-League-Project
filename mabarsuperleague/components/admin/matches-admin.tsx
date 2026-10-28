@@ -15,6 +15,21 @@ import {
   StatusPill,
 } from "@/components/admin/ui";
 
+/**
+ * The only round labels a match can have — season points and trophies are read
+ * from them, so they come from a list rather than free text. Must match
+ * KNOCKOUT_ROUNDS in backend/src/matches/rounds.ts.
+ */
+const KNOCKOUT_ROUNDS = [
+  "Final",
+  "Semifinals",
+  "Quarterfinals",
+  "Round of 16",
+  "Round of 32",
+  "Round of 64",
+];
+const GROUP_ROUNDS = ["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => `Group ${g}`);
+
 export function MatchesAdmin() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -286,13 +301,35 @@ export function MatchesAdmin() {
       {open && (
         <Modal title="Add match" onClose={() => setOpen(false)}>
           <form onSubmit={addMatch} className="flex flex-col gap-4">
-            <Field
-              label="ROUND (e.g. Semifinal)"
+            <Select
+              label="ROUND"
+              required
               value={newMatch.round}
               onChange={(e) =>
                 setNewMatch((m) => ({ ...m, round: e.target.value }))
               }
-            />
+            >
+              <option value="" disabled>
+                Choose a round
+              </option>
+              <optgroup label="Knockout">
+                {KNOCKOUT_ROUNDS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </optgroup>
+              {tournaments.find((t) => t.id === selected)?.format ===
+                "group_knockout" && (
+                <optgroup label="Group stage">
+                  {GROUP_ROUNDS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </Select>
             <div className="grid grid-cols-2 gap-4">
               <Field
                 label="TEAM A"

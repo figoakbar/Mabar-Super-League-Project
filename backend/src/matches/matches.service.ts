@@ -6,6 +6,7 @@ import {
 
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateMatchDto, SetScoreDto, UpdateMatchDto } from "./dto/match.dto";
+import { assertDecisive, normalizeRound } from "./rounds";
 
 /** Fisher–Yates shuffle (in place). */
 function shuffle<T>(arr: T[]): T[] {
@@ -104,17 +105,36 @@ export class MatchesService {
 
   async create(dto: CreateMatchDto) {
     await this.ensureTournament(dto.tournamentId);
-    return this.prisma.match.create({ data: dto });
+    return this.prisma.match.create({
+      data: { ...dto, round: normalizeRound(dto.round) },
+    });
   }
 
   async update(id: string, dto: UpdateMatchDto) {
-    await this.ensureExists(id);
-    return this.prisma.match.update({ where: { id }, data: dto });
+    const found = await this.prisma.match.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException(`Match ${id} not found`);
+    const round = dto.round !== undefined ? normalizeRound(dto.round) : found.round;
+    // Re-check the result whenever it (or the round it belongs to) changes.
+    const scoreA = dto.scoreA ?? found.scoreA;
+    const scoreB = dto.scoreB ?? found.scoreB;
+    const status = dto.status ?? found.status;
+    if (status === "completed" && scoreA != null && scoreB != null) {
+      assertDecisive(round, scoreA, scoreB);
+    }
+    return this.prisma.match.update({
+      where: { id },
+      data: { ...dto, ...(dto.round !== undefined ? { round } : {}) },
+    });
   }
 
   /** Record the final score — marks the match completed. */
   async setScore(id: string, dto: SetScoreDto) {
-    await this.ensureExists(id);
+    const found = await this.prisma.match.findUnique({
+      where: { id },
+      select: { round: true },
+    });
+    if (!found) throw new NotFoundException(`Match ${id} not found`);
+    assertDecisive(found.round, dto.scoreA, dto.scoreB);
     return this.prisma.match.update({
       where: { id },
       data: { scoreA: dto.scoreA, scoreB: dto.scoreB, status: "completed" },

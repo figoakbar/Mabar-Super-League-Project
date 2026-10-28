@@ -18,7 +18,8 @@ function EmptyCard({ children }: { children: ReactNode }) {
 type MatchRow = {
   id: string;
   opponent: string;
-  won: boolean;
+  /** W, L, or D — a level score is only possible in the group stage. */
+  result: "W" | "L" | "D";
   score: string;
   tournament: string;
   round: string;
@@ -74,7 +75,7 @@ export default async function HomePage() {
         return {
           id: m.id,
           opponent: isA ? m.teamB : m.teamA,
-          won: my > opp,
+          result: my > opp ? "W" : my < opp ? "L" : "D",
           score: `${my}–${opp}`,
           tournament: m.tournament?.name ?? "",
           round: m.round,
@@ -216,13 +217,21 @@ export default async function HomePage() {
                   <span
                     className="grid size-9 shrink-0 place-items-center rounded-md font-display text-sm font-extrabold"
                     style={{
-                      background: h.won
-                        ? "rgba(111,207,151,0.14)"
-                        : "rgba(224,122,114,0.14)",
-                      color: h.won ? "#6FCF97" : "#E07A72",
+                      background:
+                        h.result === "W"
+                          ? "rgba(111,207,151,0.14)"
+                          : h.result === "L"
+                            ? "rgba(224,122,114,0.14)"
+                            : "rgba(199,206,220,0.12)",
+                      color:
+                        h.result === "W"
+                          ? "#6FCF97"
+                          : h.result === "L"
+                            ? "#E07A72"
+                            : "#C7CEDC",
                     }}
                   >
-                    {h.won ? "W" : "L"}
+                    {h.result}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-[13.5px] font-extrabold text-white">

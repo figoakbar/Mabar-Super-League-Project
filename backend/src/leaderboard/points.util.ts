@@ -24,6 +24,44 @@ export function placementPoints(p: Placement): number {
   return 3; // confirmed but never played a completed match
 }
 
+/**
+ * Racing has no bracket, so a driver's finishing position in the *race*
+ * session is read onto the same ladder: P1 champion, P2 runner-up, P3–P4 as
+ * semifinalists, P5–P8 quarterfinalists, P9–P16 round of 16, anyone further
+ * back as an early exit. No position at all means the driver never finished a
+ * classified race (the "never played" rung).
+ */
+export function racePlacement(position: number | null | undefined): Placement {
+  if (!position || position < 1) {
+    return { wonFinal: false, lostRound: null, playedAny: false };
+  }
+  if (position === 1) return { wonFinal: true, lostRound: null, playedAny: true };
+  const lostRound =
+    position === 2
+      ? "Final"
+      : position <= 4
+        ? "Semifinals"
+        : position <= 8
+          ? "Quarterfinals"
+          : position <= 16
+            ? "Round of 16"
+            : null;
+  return { wonFinal: false, lostRound, playedAny: true };
+}
+
+/** Each driver's best classified position in the race session. */
+export function bestRacePositions(
+  results: { driver: string; session: string; position: number | null }[],
+): Map<string, number> {
+  const best = new Map<string, number>();
+  for (const r of results) {
+    if (r.session !== "race" || !r.position) continue;
+    const prev = best.get(r.driver);
+    if (prev === undefined || r.position < prev) best.set(r.driver, r.position);
+  }
+  return best;
+}
+
 /** Bigger fields are worth a little more (√ scaled, capped at ×2). */
 export function fieldMultiplier(participantCount: number): number {
   const count = participantCount || 8;
