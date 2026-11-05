@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type {
   Match,
   Participant,
@@ -15,6 +19,18 @@ import { SeasonsService } from "../seasons/seasons.service";
 import { CreateTournamentDto } from "./dto/create-tournament.dto";
 import { ScheduleItemDto } from "./dto/schedule-item.dto";
 import { UpdateTournamentDto } from "./dto/update-tournament.dto";
+
+/**
+ * Without a draw, an ongoing tournament is missing from both Drawing (closed
+ * only) and Matches & Scores (needs matches), and a completed one hands every
+ * confirmed player "never played" points. Racing has sessions instead of a draw.
+ */
+function needsDraw(status: string, format: string) {
+  return format !== "racing" && (status === "ongoing" || status === "completed");
+}
+
+const DRAW_FIRST =
+  "Draw this tournament first: set it to closed, then use Admin → Drawing.";
 
 type Counts = { matches: number };
 /** Places taken (pending + confirmed) and places confirmed, per tournament. */
@@ -128,6 +144,9 @@ export class TournamentsService {
 
   async create(dto: CreateTournamentDto) {
     const { schedule, ...rest } = dto;
+    if (needsDraw(rest.status ?? "open", rest.format ?? "knockout")) {
+      throw new BadRequestException(DRAW_FIRST);
+    }
     // Exhibition tournaments are friendlies — they live outside any season.
     // Otherwise a new tournament joins the active season (unless one was picked).
     const seasonId =
@@ -153,8 +172,8 @@ export class TournamentsService {
   }
 
   async update(id: string, dto: UpdateTournamentDto) {
-    await this.ensureExists(id);
     const { schedule, ...rest } = dto;
+    await this.assertDrawn(id, rest);
     const row = await this.prisma.tournament.update({
       where: { id },
       data: {
@@ -185,6 +204,32 @@ export class TournamentsService {
     await this.ensureExists(id);
     await this.prisma.tournament.delete({ where: { id } });
     return { id, deleted: true };
+  }
+
+  /**
+   * Checked only when the status or format changes, so a tournament already
+   * ongoing without matches can still be edited or set back to closed.
+   */
+  private async assertDrawn(
+    id: string,
+    next: { status?: string; format?: string },
+  ) {
+    const found = await this.prisma.tournament.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        format: true,
+        _count: { select: { matches: true } },
+      },
+    });
+    if (!found) throw new NotFoundException(`Tournament ${id} not found`);
+
+    const status = next.status ?? found.status;
+    const format = next.format ?? found.format;
+    const changed = status !== found.status || format !== found.format;
+    if (changed && needsDraw(status, format) && found._count.matches === 0) {
+      throw new BadRequestException(DRAW_FIRST);
+    }
   }
 
   private async ensureExists(id: string) {
