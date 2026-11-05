@@ -31,6 +31,7 @@ function needsDraw(status: string, format: string) {
 
 const DRAW_FIRST =
   "Draw this tournament first: set it to closed, then use Admin → Drawing.";
+const RACE_FIRST = "Enter the race results before completing this tournament.";
 
 type Counts = { matches: number };
 /** Places taken (pending + confirmed) and places confirmed, per tournament. */
@@ -147,6 +148,7 @@ export class TournamentsService {
     if (needsDraw(rest.status ?? "open", rest.format ?? "knockout")) {
       throw new BadRequestException(DRAW_FIRST);
     }
+    if (rest.status === "completed") throw new BadRequestException(RACE_FIRST);
     // Exhibition tournaments are friendlies — they live outside any season.
     // Otherwise a new tournament joins the active season (unless one was picked).
     const seasonId =
@@ -173,7 +175,7 @@ export class TournamentsService {
 
   async update(id: string, dto: UpdateTournamentDto) {
     const { schedule, ...rest } = dto;
-    await this.assertDrawn(id, rest);
+    await this.assertStatusAllowed(id, rest);
     const row = await this.prisma.tournament.update({
       where: { id },
       data: {
@@ -209,8 +211,12 @@ export class TournamentsService {
   /**
    * Checked only when the status or format changes, so a tournament already
    * ongoing without matches can still be edited or set back to closed.
+   *
+   * "Completed" means it really finished: every match has a result and there is
+   * a champion. A tournament stopped early is "cancelled", which has no such
+   * conditions.
    */
-  private async assertDrawn(
+  private async assertStatusAllowed(
     id: string,
     next: { status?: string; format?: string },
   ) {
@@ -219,7 +225,11 @@ export class TournamentsService {
       select: {
         status: true,
         format: true,
-        _count: { select: { matches: true } },
+        matches: { select: { round: true, status: true } },
+        raceResults: {
+          where: { session: "race", position: { not: null } },
+          select: { id: true },
+        },
       },
     });
     if (!found) throw new NotFoundException(`Tournament ${id} not found`);
@@ -227,8 +237,30 @@ export class TournamentsService {
     const status = next.status ?? found.status;
     const format = next.format ?? found.format;
     const changed = status !== found.status || format !== found.format;
-    if (changed && needsDraw(status, format) && found._count.matches === 0) {
+    if (changed && needsDraw(status, format) && found.matches.length === 0) {
       throw new BadRequestException(DRAW_FIRST);
+    }
+    if (status !== "completed" || found.status === "completed") return;
+
+    if (format === "racing") {
+      if (found.raceResults.length === 0) {
+        throw new BadRequestException(RACE_FIRST);
+      }
+      return;
+    }
+    const unplayed = found.matches.filter((m) => m.status !== "completed");
+    if (unplayed.length > 0) {
+      const n = unplayed.length;
+      throw new BadRequestException(
+        n === 1
+          ? "1 match has no score yet. Enter or delete it first."
+          : `${n} matches have no score yet. Enter or delete them first.`,
+      );
+    }
+    if (!found.matches.some((m) => m.round === "Final")) {
+      throw new BadRequestException(
+        "Enter the Final's result before completing this tournament.",
+      );
     }
   }
 

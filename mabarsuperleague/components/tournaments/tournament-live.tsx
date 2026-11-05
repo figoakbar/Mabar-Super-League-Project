@@ -170,6 +170,7 @@ export function TournamentLive({
 
   const format = detail?.format ?? "group_knockout";
   const isRacing = format === "racing";
+  const cancelled = t.status === "cancelled";
   const matches = detail?.matches ?? [];
   const participants: Participant[] = detail?.participants ?? [];
   const confirmed = participants.filter((p) => p.status === "confirmed");
@@ -275,16 +276,31 @@ export function TournamentLive({
               >
                 {gameLabel} · ONLINE
               </span>
-              <div className="flex items-center gap-1.5 rounded-full border border-[#E06055]/40 bg-[#E06055]/[0.14] px-2.5 py-1">
-                <span className="size-1.5 rounded-full bg-[#E06055] [animation:pulse-soft_1.4s_ease-in-out_infinite]" />
-                <span className="text-[10.5px] font-extrabold text-[#E06055]">
-                  LIVE — {isRacing ? "RACE WEEKEND" : "IN PROGRESS"}
-                </span>
-              </div>
+              {cancelled ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-[#E06055]/40 bg-[#E06055]/[0.14] px-2.5 py-1">
+                  <span className="text-[10.5px] font-extrabold text-[#E06055]">
+                    CANCELLED
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-full border border-[#E06055]/40 bg-[#E06055]/[0.14] px-2.5 py-1">
+                  <span className="size-1.5 rounded-full bg-[#E06055] [animation:pulse-soft_1.4s_ease-in-out_infinite]" />
+                  <span className="text-[10.5px] font-extrabold text-[#E06055]">
+                    LIVE — {isRacing ? "RACE WEEKEND" : "IN PROGRESS"}
+                  </span>
+                </div>
+              )}
             </div>
             <h1 className="font-display text-3xl font-extrabold leading-[1.1] text-white sm:text-4xl">
               {t.name}
             </h1>
+            {cancelled && (
+              <p className="text-sm font-semibold text-white/70">
+                This tournament was cancelled by IAGL. Matches already played
+                stand, but no season points, trophies or prizes are awarded.
+                {t.entryFee > 0 && " Entry fees are refunded in full."}
+              </p>
+            )}
             <span className="text-sm font-semibold text-white/50">
               {confirmed.length || participants.length} participants ·{" "}
               {isRacing
@@ -408,7 +424,7 @@ export function TournamentLive({
                               </span>
                             ) : (
                               <span className="w-fit rounded-md border border-[#6FCF97]/30 bg-[#6FCF97]/10 px-2.5 py-0.5 text-[10.5px] font-extrabold tracking-[0.8px] text-[#6FCF97]">
-                                UPCOMING
+                                {cancelled ? "NOT PLAYED" : "UPCOMING"}
                               </span>
                             )}
 

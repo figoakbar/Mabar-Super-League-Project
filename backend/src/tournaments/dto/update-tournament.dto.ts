@@ -30,7 +30,7 @@ export class UpdateTournamentDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(["open", "closed", "ongoing", "completed"])
+  @IsIn(["open", "closed", "ongoing", "completed", "cancelled"])
   status?: string;
 
   @IsOptional()

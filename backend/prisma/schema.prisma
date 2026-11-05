@@ -57,7 +57,7 @@ model Tournament {
   // Comma-separated list of supported platforms, e.g. "PS5, Xbox Series X|S, PC".
   platforms            String   @default("")
   description          String   @default("")
-  status               String   @default("open") // open | ongoing | completed
+  status               String   @default("open") // open | closed | ongoing | completed | cancelled
   // knockout | group_knockout | racing — drives how the bracket is displayed
   format               String   @default("knockout")
   // minor | major | championship — weights the season points a result awards
@@ -147,6 +147,7 @@ model Participant {
   status       String     @default("pending") // pending | confirmed | rejected
   receiptUrl   String? // uploaded payment proof, e.g. /uploads/abc.jpg
   reviewedAt   DateTime?
+  refundedAt   DateTime? // entry fee paid back after the tournament was cancelled
   createdAt    DateTime   @default(now())
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId String

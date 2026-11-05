@@ -66,6 +66,7 @@ export function StatusPill({ status }: { status: string }) {
     closed: ["rgba(217,142,82,0.14)", "#D98E52"],
     ongoing: ["rgba(255,184,0,0.14)", "#FFB800"],
     completed: ["rgba(111,207,151,0.14)", "#6FCF97"],
+    cancelled: ["rgba(224,122,114,0.14)", "#E07A72"],
     pending: ["rgba(255,184,0,0.14)", "#FFB800"],
     confirmed: ["rgba(111,207,151,0.14)", "#6FCF97"],
     rejected: ["rgba(224,122,114,0.14)", "#E07A72"],

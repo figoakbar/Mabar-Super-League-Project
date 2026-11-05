@@ -216,6 +216,16 @@ export function TournamentsAdmin() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (
+      editing &&
+      form.status === "cancelled" &&
+      editing.status !== "cancelled" &&
+      !confirm(
+        `Cancel "${editing.name}"? It stops for everyone: no season points, trophies or prizes. Matches already played still count in players' records.\n\nAfterwards, tell the participant group why, and refund every entry fee in full.`,
+      )
+    ) {
+      return;
+    }
     setSaving(true);
     setFormError(null);
     const payload = {
@@ -353,6 +363,7 @@ export function TournamentsAdmin() {
             <option value="closed">closed</option>
             <option value="ongoing">ongoing</option>
             <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
           </Select>
         </div>
         <div className="w-full sm:w-44">
@@ -557,6 +568,9 @@ export function TournamentsAdmin() {
                 <option value="closed">closed — registration closed</option>
                 <option value="ongoing">ongoing</option>
                 <option value="completed">completed</option>
+                {editing && (
+                  <option value="cancelled">cancelled — stopped early</option>
+                )}
               </Select>
               <Select
                 label="FORMAT"

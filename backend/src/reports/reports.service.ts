@@ -60,13 +60,20 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async monthly() {
-    const [tournaments, participants, users] = await Promise.all([
+    const [allTournaments, allParticipants, users] = await Promise.all([
       this.prisma.tournament.findMany(),
       this.prisma.participant.findMany({
-        include: { tournament: { select: { startDate: true, entryFee: true, game: true } } },
+        include: { tournament: { select: { startDate: true, entryFee: true, game: true, status: true } } },
       }),
       this.prisma.user.count(),
     ]);
+
+    // A cancelled tournament pays no prizes and owes its fees back, so it stays
+    // out of every money figure below and is reported under `refunds` instead.
+    const tournaments = allTournaments.filter((t) => t.status !== "cancelled");
+    const participants = allParticipants.filter(
+      (p) => p.tournament?.status !== "cancelled",
+    );
 
     const rows = new Map<string, MonthlyRow>();
     const row = (key: string): MonthlyRow => {
@@ -99,7 +106,7 @@ export class ReportsService {
       if (p.status === "confirmed") {
         r.participantsConfirmed += 1;
         // Only a verified payment counts as money in.
-        r.revenue += p.tournament?.entryFee ?? 0;
+        if (!p.refundedAt) r.revenue += p.tournament?.entryFee ?? 0;
       } else if (p.status === "pending") {
         r.participantsPending += 1;
       }
@@ -132,7 +139,7 @@ export class ReportsService {
       if (!key) continue;
       const c = cell(key, p.tournament?.game || "Unknown");
       c.participants += 1;
-      c.revenue += p.tournament?.entryFee ?? 0;
+      if (!p.refundedAt) c.revenue += p.tournament?.entryFee ?? 0;
     }
     const byGameMonth = [...cellMap.values()].sort((a, b) => a.key.localeCompare(b.key));
     // All-time per-game totals, biggest earner first.
@@ -146,6 +153,20 @@ export class ReportsService {
         (sum, p) => sum + (p.tournament?.entryFee ?? 0),
         0,
       ),
+    };
+
+    // Everyone who paid for a cancelled tournament and hasn't been paid back:
+    // confirmed entries, plus pending ones that already sent a receipt.
+    const owed = allParticipants.filter(
+      (p) =>
+        p.tournament?.status === "cancelled" &&
+        (p.tournament.entryFee ?? 0) > 0 &&
+        !p.refundedAt &&
+        (p.status === "confirmed" || (p.status === "pending" && p.receiptUrl)),
+    );
+    const refunds = {
+      owed: owed.length,
+      owedValue: owed.reduce((sum, p) => sum + (p.tournament?.entryFee ?? 0), 0),
     };
 
     const totals = months.reduce(
@@ -167,6 +188,6 @@ export class ReportsService {
       },
     );
 
-    return { months, byGame, byGameMonth, totals, outstanding, users };
+    return { months, byGame, byGameMonth, totals, outstanding, refunds, users };
   }
 }

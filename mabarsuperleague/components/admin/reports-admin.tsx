@@ -763,7 +763,7 @@ export function ReportsAdmin() {
           </Card>
 
           {/* Current state, deliberately outside the monthly grouping */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             <StatTile
               label="Awaiting review"
               value={String(data?.outstanding.pendingReview ?? 0)}
@@ -775,6 +775,16 @@ export function ReportsAdmin() {
               tone={
                 data && data.outstanding.pendingReview > 0 ? "warning" : "neutral"
               }
+            />
+            <StatTile
+              label="Refunds owed"
+              value={String(data?.refunds.owed ?? 0)}
+              sub={
+                data && data.refunds.owed > 0
+                  ? `${rupiah(data.refunds.owedValue)} from cancelled tournaments`
+                  : "nothing to pay back"
+              }
+              tone={data && data.refunds.owed > 0 ? "warning" : "neutral"}
             />
             <StatTile
               label="Registered users"

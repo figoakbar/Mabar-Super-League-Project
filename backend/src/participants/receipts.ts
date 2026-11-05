@@ -66,15 +66,16 @@ type ParticipantRow = {
   team: string;
   contact: string;
   receiptUrl: string | null;
+  refundedAt?: Date | null;
 };
 
 /**
  * The shape of a registration as the API hands it out. Everyone sees whether a
  * receipt was uploaded; only an admin or the entrant also gets the contact
- * detail and a link to the receipt itself.
+ * detail, a link to the receipt itself, and whether the fee was refunded.
  */
 export function presentParticipant<T extends ParticipantRow>(row: T, viewer: Viewer) {
-  const { contact, receiptUrl, ...rest } = row;
+  const { contact, receiptUrl, refundedAt, ...rest } = row;
   const hasReceipt = Boolean(receiptUrl);
   const privileged = viewer?.role === "admin" || viewer?.username === row.team;
   if (!privileged) return { ...rest, hasReceipt };
@@ -83,5 +84,6 @@ export function presentParticipant<T extends ParticipantRow>(row: T, viewer: Vie
     contact,
     hasReceipt,
     receiptUrl: hasReceipt ? `/participants/${row.id}/receipt` : null,
+    refundedAt: refundedAt ?? null,
   };
 }

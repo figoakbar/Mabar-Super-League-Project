@@ -85,6 +85,19 @@ export function TournamentParticipants({
     }
   }
 
+  async function setRefunded(p: Participant, refunded: boolean) {
+    setBusy(p.id);
+    setError(null);
+    try {
+      await api.setRefunded(p.id, refunded);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function remove(p: Participant) {
     if (!confirm(`Remove ${p.team} from ${tournament.name}?`)) return;
     setBusy(p.id);
@@ -131,6 +144,11 @@ export function TournamentParticipants({
     rejected: rows.filter((p) => p.status === "rejected").length,
   };
   const shown = tab === "all" ? rows : rows.filter((p) => p.status === tab);
+  // Who paid for this cancelled tournament and is owed their fee back.
+  const refundable = (p: Participant) =>
+    tournament.status === "cancelled" &&
+    tournament.entryFee > 0 &&
+    (p.status === "confirmed" || (p.status === "pending" && p.hasReceipt));
 
   return (
     <div className="flex flex-col gap-3.5 border-t border-white/[0.08] bg-black/25 px-5 py-4">
@@ -228,6 +246,28 @@ export function TournamentParticipants({
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-1.5">
+                      {(refundable(p) || p.refundedAt) &&
+                        (p.refundedAt ? (
+                          <button
+                            type="button"
+                            disabled={busy === p.id}
+                            onClick={() => void setRefunded(p, false)}
+                            title="Undo refund"
+                            className="cursor-pointer rounded-md border border-[#6FCF97]/40 bg-[#6FCF97]/10 px-2 py-1 text-[11px] font-extrabold text-[#6FCF97] transition-colors hover:bg-[#6FCF97]/20 disabled:opacity-40"
+                          >
+                            <Check className="mr-1 inline size-3 align-[-1px]" />
+                            Refunded
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy === p.id}
+                            onClick={() => void setRefunded(p, true)}
+                            className="cursor-pointer rounded-md border border-[#FFB800]/40 bg-[#FFB800]/10 px-2 py-1 text-[11px] font-extrabold text-[#FFB800] transition-colors hover:bg-[#FFB800]/20 disabled:opacity-40"
+                          >
+                            Mark refunded
+                          </button>
+                        ))}
                       {p.status !== "confirmed" && (
                         <button
                           type="button"

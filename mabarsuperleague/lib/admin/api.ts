@@ -28,7 +28,12 @@ export const API_ORIGIN =
 
 // open = registration open · closed = registration closed, ready to draw ·
 // ongoing = playing · completed = finished.
-export type TournamentStatus = "open" | "closed" | "ongoing" | "completed";
+export type TournamentStatus =
+  | "open"
+  | "closed"
+  | "ongoing"
+  | "completed"
+  | "cancelled";
 
 /** Tournament format — decides how the bracket / results are displayed. */
 export type TournamentFormat = "knockout" | "group_knockout" | "racing";
@@ -134,6 +139,8 @@ export type Participant = {
    * browser proxy, `${API_BASE_BROWSER}${receiptUrl}`.
    */
   receiptUrl?: string | null;
+  /** Admin or the entrant only: when the fee was paid back after a cancellation. */
+  refundedAt?: string | null;
   reviewedAt: string | null;
   tournamentId: string;
   createdAt: string;
@@ -143,6 +150,7 @@ export type Participant = {
     game?: string;
     status?: TournamentStatus;
     tier?: TournamentTier;
+    entryFee?: number;
   };
 };
 
@@ -267,6 +275,8 @@ export type MonthlyReport = {
   byGameMonth: GameMonthRow[];
   totals: Omit<MonthlyRow, "key">;
   outstanding: { pendingReview: number; pendingValue: number };
+  /** Fees still to pay back for cancelled tournaments. */
+  refunds: { owed: number; owedValue: number };
   users: number;
 };
 
@@ -447,6 +457,11 @@ export const api = {
     request<Participant>(`/participants/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
+    }),
+  setRefunded: (id: string, refunded: boolean) =>
+    request<Participant>(`/participants/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ refunded }),
     }),
   deleteParticipant: (id: string) =>
     request<{ id: string; deleted: boolean }>(`/participants/${id}`, {

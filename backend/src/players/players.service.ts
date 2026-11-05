@@ -62,6 +62,7 @@ function formatDate(s: string): string {
 }
 
 function resultLabel(t: PerTournament): string {
+  if (t.status === "cancelled") return "Cancelled";
   if (t.wonFinal) return "Champion";
   if (t.racePosition === 2) return "Runner-up";
   if (t.racePosition) return `P${t.racePosition}`;
@@ -277,7 +278,8 @@ export class PlayersService {
         }));
 
       const championships = [...a.tournaments.values()]
-        .filter((t) => t.wonFinal)
+        // A cancelled tournament has no champion, even if its Final was played.
+        .filter((t) => t.wonFinal && t.status !== "cancelled")
         .map((t) => t.name);
 
       return {

@@ -129,6 +129,12 @@ const STATUS = {
     statusColor: "#C7CEDC",
     note: "This tournament has finished.",
   },
+  cancelled: {
+    status: "Cancelled",
+    statusBg: "rgba(224,122,114,0.12)",
+    statusColor: "#E07A72",
+    note: "This tournament was cancelled.",
+  },
   // A registration still awaiting review when the tournament moved on: the
   // player never made the bracket, so neither "Pending" nor "Completed" is true.
   unconfirmedLive: {
@@ -153,7 +159,17 @@ function toEntry(r: Participant): TournamentEntry {
   // finished. Still awaiting review: "Pending" while it can still be decided,
   // "Not confirmed" once the tournament has started or finished without it.
   const confirmed = r.status === "confirmed";
-  const style = confirmed
+  const paid = (r.tournament?.entryFee ?? 0) > 0 && (confirmed || r.hasReceipt);
+  const style = tStatus === "cancelled"
+    ? {
+        ...STATUS.cancelled,
+        note: !paid
+          ? STATUS.cancelled.note
+          : r.refundedAt
+            ? "This tournament was cancelled. Your entry fee has been refunded."
+            : "This tournament was cancelled. Your entry fee will be refunded in full.",
+      }
+    : confirmed
     ? tStatus === "completed"
       ? STATUS.completed
       : tStatus === "ongoing"
@@ -197,7 +213,11 @@ export function TournamentTabs({ username }: { username: string }) {
         for (const r of byTournament.values()) {
           if (r.status === "rejected") continue;
           const entry = toEntry(r);
-          if (r.tournament?.status === "completed") finished.push(entry);
+          if (
+            r.tournament?.status === "completed" ||
+            r.tournament?.status === "cancelled"
+          )
+            finished.push(entry);
           else live.push(entry);
         }
         setOngoing(live);

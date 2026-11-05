@@ -26,6 +26,7 @@ const closedLabel: Record<string, string> = {
   closed: "Registration closed",
   ongoing: "Tournament live",
   completed: "Tournament finished",
+  cancelled: "Tournament cancelled",
 };
 
 function formatWhen(iso: string) {
@@ -86,7 +87,8 @@ export function RegistrationsAdmin() {
   // Confirmed and rejected entries are listed for open tournaments only, but a
   // registration awaiting review is always listed, whatever its tournament's
   // status — otherwise it drops out of sight the moment registration closes and
-  // the player is left waiting for a decision that never comes.
+  // the player is left waiting for a decision that never comes. A cancelled
+  // tournament has nothing left to decide: its fees go back instead.
   const openIds = new Set(
     tournaments.filter((t) => t.status === "open").map((t) => t.id),
   );
@@ -95,7 +97,8 @@ export function RegistrationsAdmin() {
   const isStale = (p: Participant) =>
     p.status === "pending" && !openIds.has(p.tournamentId);
 
-  const scoped = rows.filter(inScope);
+  const reviewable = rows.filter((p) => p.tournament?.status !== "cancelled");
+  const scoped = reviewable.filter(inScope);
   const filterTournaments = tournaments.filter(
     (t) => openIds.has(t.id) || scoped.some((p) => p.tournamentId === t.id),
   );
@@ -107,8 +110,8 @@ export function RegistrationsAdmin() {
     .sort((a, b) => Number(isStale(b)) - Number(isStale(a)));
 
   // Same number as the report's "Awaiting review" tile.
-  const pendingCount = rows.filter((p) => p.status === "pending").length;
-  const staleCount = rows.filter(isStale).length;
+  const pendingCount = reviewable.filter((p) => p.status === "pending").length;
+  const staleCount = reviewable.filter(isStale).length;
 
   async function review(p: Participant, next: "confirmed" | "rejected") {
     setBusy(p.id);

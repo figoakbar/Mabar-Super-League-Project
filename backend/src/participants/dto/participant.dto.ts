@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
 export class CreateParticipantDto {
   @IsString()
@@ -40,4 +40,9 @@ export class UpdateParticipantDto {
   @IsOptional()
   @IsIn(["pending", "confirmed", "rejected"])
   status?: string;
+
+  // Records that the entry fee was paid back after a cancellation.
+  @IsOptional()
+  @IsBoolean()
+  refunded?: boolean;
 }

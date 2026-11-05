@@ -37,7 +37,7 @@ export class ParticipantsService {
       orderBy: { createdAt: "asc" },
       include: {
         tournament: {
-          select: { id: true, name: true, game: true, status: true, tier: true },
+          select: { id: true, name: true, game: true, status: true, tier: true, entryFee: true },
         },
       },
     });
@@ -123,10 +123,17 @@ export class ParticipantsService {
         select: {
           status: true,
           tournamentId: true,
-          tournament: { select: { maxTeams: true } },
+          tournament: { select: { maxTeams: true, status: true } },
         },
       });
       if (!found) throw new NotFoundException(`Participant ${id} not found`);
+
+      const { refunded, ...fields } = dto;
+      if (refunded && found.tournament.status !== "cancelled") {
+        throw new BadRequestException(
+          "Refunds are recorded only for cancelled tournaments.",
+        );
+      }
 
       // Re-admitting a rejected entry takes a place again; confirming one
       // must not push the bracket past its size.
@@ -146,7 +153,13 @@ export class ParticipantsService {
         next === "confirmed" || next === "rejected" ? { reviewedAt: new Date() } : {};
       return tx.participant.update({
         where: { id },
-        data: { ...dto, ...reviewed },
+        data: {
+          ...fields,
+          ...reviewed,
+          ...(refunded === undefined
+            ? {}
+            : { refundedAt: refunded ? new Date() : null }),
+        },
       });
     });
     return presentParticipant(row, viewer);
