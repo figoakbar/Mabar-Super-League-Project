@@ -276,10 +276,18 @@ export function TournamentLive({
               >
                 {gameLabel} · ONLINE
               </span>
-              {cancelled ? (
+              {t.status === "cancelled" ? (
                 <div className="flex items-center gap-1.5 rounded-full border border-[#E06055]/40 bg-[#E06055]/[0.14] px-2.5 py-1">
                   <span className="text-[10.5px] font-extrabold text-[#E06055]">
                     CANCELLED
+                  </span>
+                </div>
+              ) : t.status !== "ongoing" ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.06] px-2.5 py-1">
+                  <span className="text-[10.5px] font-extrabold text-white/60">
+                    {t.status === "completed"
+                      ? "COMPLETED"
+                      : "REGISTRATION CLOSED"}
                   </span>
                 </div>
               ) : (
