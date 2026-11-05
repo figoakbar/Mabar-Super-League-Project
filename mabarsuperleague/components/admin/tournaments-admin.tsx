@@ -123,6 +123,7 @@ export function TournamentsAdmin() {
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [game, setGame] = useState("");
+  const [status, setStatus] = useState("");
 
   /** Which tournament's participant list is expanded, if any. */
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -282,6 +283,7 @@ export function TournamentsAdmin() {
 
   const shown = rows.filter((t) => {
     if (game && t.game !== game) return false;
+    if (status && t.status !== status) return false;
     if (!month && !year) return true;
     const on = startedOn(t);
     if (!on) return false; // undated rows cannot match a month or year
@@ -290,12 +292,13 @@ export function TournamentsAdmin() {
     return true;
   });
 
-  const filtering = Boolean(month || year || game);
+  const filtering = Boolean(month || year || game || status);
 
   function resetFilters() {
     setMonth("");
     setYear("");
     setGame("");
+    setStatus("");
   }
 
   // Collapsing on filter change avoids a participant panel staying "open" on a
@@ -323,7 +326,7 @@ export function TournamentsAdmin() {
         </button>
       </div>
 
-      {/* Filter by game, and by when the tournament starts */}
+      {/* Filter by game, status, and by when the tournament starts */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-full sm:w-52">
           <Select
@@ -337,6 +340,19 @@ export function TournamentsAdmin() {
                 {g}
               </option>
             ))}
+          </Select>
+        </div>
+        <div className="w-full sm:w-44">
+          <Select
+            label="STATUS"
+            value={status}
+            onChange={(e) => changeFilter(() => setStatus(e.target.value))}
+          >
+            <option value="">All statuses</option>
+            <option value="open">open</option>
+            <option value="closed">closed</option>
+            <option value="ongoing">ongoing</option>
+            <option value="completed">completed</option>
           </Select>
         </div>
         <div className="w-full sm:w-44">
