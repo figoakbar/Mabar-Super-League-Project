@@ -7,6 +7,18 @@ import { RotateCcw, Shuffle } from "lucide-react";
 import { api, type Match, type Tournament } from "@/lib/admin/api";
 import { ErrorNote, Select } from "@/components/admin/ui";
 import { avatarBg } from "@/lib/data/tournament-view";
+import { groupCount } from "@/lib/tournaments/group-standings";
+
+/** "9 → 2 groups (5 and 4 players)", as the draw will deal them. */
+function groupSplit(players: number): string {
+  const g = groupCount(players);
+  const small = Math.floor(players / g);
+  const big = Math.ceil(players / g);
+  const label = g === 1 ? "1 group" : `${g} groups`;
+  return small === big
+    ? `${label} of ${small}`
+    : `${label} of ${small}–${big} (one extra player in ${players % g})`;
+}
 
 type Group = { label: string; players: string[] };
 
@@ -214,7 +226,7 @@ export function DrawingAdmin() {
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-white/[0.12] bg-[#101114] px-6 py-16">
           <p className="text-center text-sm font-semibold text-white/45">
             {isGroup
-              ? `${tournament?.confirmedTeams ?? 0} confirmed players will be split into groups, each playing a round-robin.`
+              ? `${tournament?.confirmedTeams ?? 0} confirmed players will be split into ${groupSplit(tournament?.confirmedTeams ?? 0)}, each playing a round-robin. The top two of each group go to the knockout.`
               : `${tournament?.confirmedTeams ?? 0} confirmed players will be paired into a knockout bracket.`}
           </p>
           <button
@@ -309,7 +321,10 @@ export function DrawingAdmin() {
             First-round bracket
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {matches.map((m, i) => (
+            {/* The draw writes the first round first; later rounds are empty. */}
+            {matches
+              .filter((m) => m.round === matches[0].round)
+              .map((m, i) => (
               <div
                 key={m.id}
                 className={`overflow-hidden rounded-xl border border-white/[0.08] bg-[#101114] ${cls}`}
@@ -323,10 +338,18 @@ export function DrawingAdmin() {
                     key={idx}
                     className="flex items-center gap-2.5 border-b border-white/[0.05] px-4 py-3 last:border-0"
                   >
-                    <Avatar name={name} />
-                    <span className="truncate text-[13.5px] font-extrabold text-white">
-                      {name}
-                    </span>
+                    {m.status === "bye" && idx === 1 ? (
+                      <span className="truncate text-[13.5px] font-bold text-white/35">
+                        Bye — straight to the next round
+                      </span>
+                    ) : (
+                      <>
+                        <Avatar name={name} />
+                        <span className="truncate text-[13.5px] font-extrabold text-white">
+                          {name}
+                        </span>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

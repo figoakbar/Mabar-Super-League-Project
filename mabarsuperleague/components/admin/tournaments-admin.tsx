@@ -634,13 +634,21 @@ export function TournamentsAdmin() {
                 value={form.entryFee}
                 onChange={(e) => set("entryFee")(e.target.value)}
               />
-              <Field
-                label="MAX TEAMS"
-                type="number"
-                min={0}
-                value={form.maxTeams}
-                onChange={(e) => set("maxTeams")(e.target.value)}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Field
+                  label="MAX TEAMS"
+                  type="number"
+                  min={0}
+                  value={form.maxTeams}
+                  onChange={(e) => set("maxTeams")(e.target.value)}
+                />
+                {form.format === "group_knockout" && (
+                  <p className="text-[11.5px] font-semibold text-white/40">
+                    Groups come out even with 8, 12, 16, 24 or 32 players. With
+                    other numbers some groups get one extra player.
+                  </p>
+                )}
+              </div>
               <Field
                 label="START DATE"
                 type="date"

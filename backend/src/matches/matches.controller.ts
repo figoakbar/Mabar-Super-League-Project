@@ -37,6 +37,12 @@ export class MatchesController {
   }
 
   @Roles("admin")
+  @Post("bracket")
+  buildBracket(@Body() dto: GenerateDrawDto) {
+    return this.matches.buildBracket(dto.tournamentId);
+  }
+
+  @Roles("admin")
   @Post()
   create(@Body() dto: CreateMatchDto) {
     return this.matches.create(dto);

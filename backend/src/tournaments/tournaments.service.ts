@@ -248,7 +248,9 @@ export class TournamentsService {
       }
       return;
     }
-    const unplayed = found.matches.filter((m) => m.status !== "completed");
+    const unplayed = found.matches.filter(
+      (m) => m.status !== "completed" && m.status !== "bye",
+    );
     if (unplayed.length > 0) {
       const n = unplayed.length;
       throw new BadRequestException(

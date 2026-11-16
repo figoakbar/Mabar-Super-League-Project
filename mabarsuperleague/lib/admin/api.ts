@@ -161,7 +161,12 @@ export type Match = {
   teamB: string;
   scoreA: number | null;
   scoreB: number | null;
-  status: "scheduled" | "completed";
+  /**
+   * "bye": teamA goes straight through, teamB is empty. A later-round slot has
+   * "" for a side whose player isn't known yet.
+   */
+  status: "scheduled" | "completed" | "bye";
+  position: number;
   playedAt: string;
   tournamentId: string;
   createdAt: string;
@@ -527,6 +532,21 @@ export const api = {
     request<Match[]>("/matches/generate", {
       method: "POST",
       body: JSON.stringify({ tournamentId }),
+    }),
+  /**
+   * Add any missing knockout rounds down to the Final and move decided results
+   * forward (for draws made before full brackets); returns all matches.
+   */
+  buildBracket: (tournamentId: string) =>
+    request<Match[]>("/matches/bracket", {
+      method: "POST",
+      body: JSON.stringify({ tournamentId }),
+    }),
+  /** Set the players on a bracket slot ("" leaves a side open). */
+  updateMatch: (id: string, data: { teamA?: string; teamB?: string }) =>
+    request<Match>(`/matches/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
     }),
   createMatch: (data: Partial<Match> & { tournamentId: string }) =>
     request<Match>("/matches", {

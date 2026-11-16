@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   api,
   RACE_SESSIONS,
-  type Match,
   type Participant,
   type RaceResult,
   type Tournament,
@@ -14,6 +13,7 @@ import {
   type RaceSession,
 } from "@/lib/admin/api";
 import { accentFor } from "@/lib/data/tournament-view";
+import { rankGroup } from "@/lib/tournaments/group-standings";
 
 const PALETTE = [
   "linear-gradient(160deg, #8E7BFF, #5B3FD4)",
@@ -74,38 +74,6 @@ function groupSeedPairs(groupLabels: string[]): Seed[] {
   return pairs;
 }
 
-type Standing = { name: string; w: number; l: number; d: number; pts: number };
-
-/** Group standings computed from completed matches (3 pts win, 1 draw). */
-function standingsFor(matches: Match[]): Standing[] {
-  const table = new Map<string, Standing>();
-  const row = (n: string) => {
-    if (!table.has(n)) table.set(n, { name: n, w: 0, l: 0, d: 0, pts: 0 });
-    return table.get(n)!;
-  };
-  for (const m of matches) {
-    const a = row(m.teamA);
-    const b = row(m.teamB);
-    if (m.status !== "completed" || m.scoreA == null || m.scoreB == null) continue;
-    if (m.scoreA > m.scoreB) {
-      a.w++;
-      a.pts += 3;
-      b.l++;
-    } else if (m.scoreA < m.scoreB) {
-      b.w++;
-      b.pts += 3;
-      a.l++;
-    } else {
-      a.d++;
-      b.d++;
-      a.pts++;
-      b.pts++;
-    }
-  }
-  return [...table.values()].sort(
-    (x, y) => y.pts - x.pts || y.w - x.w || x.name.localeCompare(y.name),
-  );
-}
 
 const sessionLabel: Record<RaceSession, string> = {
   practice: "Practice",
@@ -180,7 +148,10 @@ export function TournamentLive({
   const draw = "rgba(255,255,255,0.7)";
 
   // ---- match sections (grouped by round) ----
-  const rounds = Array.from(new Set(matches.map((m) => m.round || "Matches")));
+  // The Matches tab lists real pairings: no byes, no slots still waiting for
+  // a player (the bracket shows those).
+  const listed = matches.filter((m) => m.status !== "bye" && m.teamA && m.teamB);
+  const rounds = Array.from(new Set(listed.map((m) => m.round || "Matches")));
   rounds.sort((a, b) => {
     const ia = ROUND_ORDER.indexOf(a);
     const ib = ROUND_ORDER.indexOf(b);
@@ -191,7 +162,7 @@ export function TournamentLive({
     .filter((r) => matchFilter === "All" || r === matchFilter)
     .map((round) => ({
       key: round,
-      matches: matches
+      matches: listed
         .filter((m) => (m.round || "Matches") === round)
         .sort(
           (a, b) =>
@@ -201,7 +172,9 @@ export function TournamentLive({
     }));
 
   // ---- bracket data ----
-  const groupRounds = rounds.filter((r) => r.toLowerCase().startsWith("group"));
+  const groupRounds = Array.from(
+    new Set(matches.map((m) => m.round || "")),
+  ).filter((r) => r.toLowerCase().startsWith("group"));
   // The knockout stage of a group tournament is sized to the qualifiers (top 2
   // of each group), not the whole field — 4 groups → 8 → Quarterfinals. A pure
   // knockout follows the confirmed count, falling back to the slot count so a
@@ -213,11 +186,10 @@ export function TournamentLive({
           confirmed.length || participants.length || detail?.maxTeams || 2,
         );
 
-  // Before any knockout match exists we still project the first round from the
-  // groups, so the reader can see who would meet whom once the groups finish.
-  const knockoutStarted = matches.some((m) => koRounds.includes(m.round || ""));
+  // Until the groups finish, the first knockout round shows who would meet whom
+  // ("1st · Group A") in its open places.
   const seedPairs =
-    format === "group_knockout" && groupRounds.length > 0 && !knockoutStarted
+    format === "group_knockout" && groupRounds.length > 0
       ? groupSeedPairs(groupRounds)
       : [];
 
@@ -681,9 +653,12 @@ export function TournamentLive({
                   </div>
                 ) : (
                   groupRounds.map((g) => {
-                    const table = standingsFor(
+                    // Same ranking the knockout is paired from: points, then
+                    // head-to-head.
+                    const table = rankGroup(
                       matches.filter((m) => (m.round || "") === g),
                     );
+                    const unsettled = table.slice(0, 3).some((r) => r.tied);
                     return (
                       <div
                         key={g}
@@ -725,6 +700,14 @@ export function TournamentLive({
                               >
                                 {disp(r.name)}
                               </span>
+                              {r.tied && (
+                                <span
+                                  title="Level on points and head-to-head"
+                                  className="text-[12px] font-extrabold text-white/40"
+                                >
+                                  =
+                                </span>
+                              )}
                               <span className="w-11 text-right text-[12.5px] font-extrabold text-white/60">
                                 {r.w}·{r.l}
                               </span>
@@ -735,7 +718,9 @@ export function TournamentLive({
                           );
                         })}
                         <div className="px-[18px] py-2.5 text-[10.5px] font-bold text-white/30">
-                          Top 2 advance to the knockout stage
+                          Top 2 advance to the knockout stage. Level on points,
+                          head-to-head decides
+                          {unsettled && "; = still level, admins decide"}.
                         </div>
                       </div>
                     );
@@ -790,9 +775,15 @@ export function TournamentLive({
                                       className="overflow-hidden rounded-[10px] border border-white/[0.08] bg-black/30"
                                     >
                                       {[
-                                        [m.teamA, m.scoreA, done && m.scoreA! > m.scoreB!],
-                                        [m.teamB, m.scoreB, done && m.scoreB! > m.scoreA!],
-                                      ].map(([name, score, isWinner], idx) => (
+                                        [m.teamA, m.scoreA, m.status === "bye" || (done && m.scoreA! > m.scoreB!)],
+                                        [m.status === "bye" ? "Bye" : m.teamB, m.scoreB, done && m.scoreB! > m.scoreA!],
+                                      ].map(([name, score, isWinner], idx) => {
+                                        const projected =
+                                          koRounds.indexOf(round) === 0
+                                            ? seedPairs[m.position]?.[idx === 0 ? "a" : "b"]
+                                            : undefined;
+                                        const shown = String(name) || projected || "TBD";
+                                        return (
                                         <div
                                           key={idx}
                                           className="flex items-center justify-between gap-2 border-b border-white/[0.05] px-3.5 py-2.5 last:border-0"
@@ -800,20 +791,23 @@ export function TournamentLive({
                                           <span
                                             className="truncate text-[12.5px] font-extrabold"
                                             style={{
-                                              color: isWinner
-                                                ? win
-                                                : done
-                                                  ? lose
-                                                  : "#FFFFFF",
+                                              color: !name
+                                                ? "rgba(255,255,255,0.4)"
+                                                : isWinner
+                                                  ? win
+                                                  : done
+                                                    ? lose
+                                                    : "#FFFFFF",
                                             }}
                                           >
-                                            {disp(String(name))}
+                                            {name ? disp(String(name)) : shown}
                                           </span>
                                           <span className="text-[11px] font-extrabold text-white/50">
                                             {score ?? ""}
                                           </span>
                                         </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   );
                                 })

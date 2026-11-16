@@ -71,6 +71,7 @@ export function StatusPill({ status }: { status: string }) {
     confirmed: ["rgba(111,207,151,0.14)", "#6FCF97"],
     rejected: ["rgba(224,122,114,0.14)", "#E07A72"],
     scheduled: ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.6)"],
+    bye: ["rgba(79,163,224,0.14)", "#4FA3E0"],
   };
   const [bg, color] = map[status] ?? ["rgba(255,255,255,0.08)", "#FFF"];
   return (

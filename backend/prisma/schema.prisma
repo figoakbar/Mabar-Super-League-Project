@@ -160,7 +160,9 @@ model Match {
   teamB        String
   scoreA       Int?
   scoreB       Int?
-  status       String     @default("scheduled") // scheduled | completed
+  status       String     @default("scheduled") // scheduled | completed | bye
+  // Slot within the round: neighbours (0 and 1, 2 and 3, …) meet next round.
+  position     Int        @default(0)
   playedAt     String     @default("")
   createdAt    DateTime   @default(now())
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
