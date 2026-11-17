@@ -41,6 +41,37 @@ function groupMembers(matches: Match[]): Map<string, string[]> {
   );
 }
 
+/**
+ * Why `player` can't take a side in a match of `round` alongside `other`, if
+ * it can't: a pair meets once in a group, and a player has one place in a
+ * knockout round. Mirrors MatchesService.assertNotDuplicate; `exceptId` is the
+ * match being edited.
+ */
+function clash(
+  matches: Match[],
+  round: string,
+  player: string,
+  other: string,
+  exceptId?: string,
+): string | null {
+  if (player === other) return "picked";
+  const rest = matches.filter((m) => m.round === round && m.id !== exceptId);
+  if (round.startsWith("Group ")) {
+    if (!other) return null;
+    return rest.some(
+      (m) =>
+        (m.teamA === player && m.teamB === other) ||
+        (m.teamA === other && m.teamB === player),
+    )
+      ? "already met"
+      : null;
+  }
+  if (roundSize(round) === 0) return null;
+  return rest.some((m) => m.teamA === player || m.teamB === player)
+    ? "already in this round"
+    : null;
+}
+
 /** Players in a knockout round: "Final" → 2, "Semifinals" → 4, "Round of 16" → 16. */
 function roundSize(round: string): number {
   if (round === "Final") return 2;
@@ -493,15 +524,20 @@ export function MatchesAdmin() {
                   onChange={(e) => setSlot((s) => s && { ...s, [side]: e.target.value })}
                 >
                   <option value="">TBD</option>
-                  {players.map((p) => (
-                    <option
-                      key={p}
-                      value={p}
-                      disabled={p === slot[side === "teamA" ? "teamB" : "teamA"]}
-                    >
-                      {p}
-                    </option>
-                  ))}
+                  {players.map((p) => {
+                    const why = clash(
+                      matches,
+                      slot.round,
+                      p,
+                      slot[side === "teamA" ? "teamB" : "teamA"],
+                      slot.id,
+                    );
+                    return (
+                      <option key={p} value={p} disabled={!!why && p !== slot[side]}>
+                        {why && why !== "picked" ? `${p} · ${why}` : p}
+                      </option>
+                    );
+                  })}
                 </Select>
               ))}
             </div>
@@ -571,15 +607,16 @@ export function MatchesAdmin() {
                   <option value="" disabled>
                     Choose a player
                   </option>
-                  {newMatchPlayers.map((p) => (
-                    <option
-                      key={p}
-                      value={p}
-                      disabled={p === newMatch[side === "teamA" ? "teamB" : "teamA"]}
-                    >
-                      {p}
-                    </option>
-                  ))}
+                  {newMatchPlayers.map((p) => {
+                    const why = newMatch.round
+                      ? clash(matches, newMatch.round, p, newMatch[side === "teamA" ? "teamB" : "teamA"])
+                      : null;
+                    return (
+                      <option key={p} value={p} disabled={!!why}>
+                        {why && why !== "picked" ? `${p} · ${why}` : p}
+                      </option>
+                    );
+                  })}
                 </Select>
               ))}
             </div>

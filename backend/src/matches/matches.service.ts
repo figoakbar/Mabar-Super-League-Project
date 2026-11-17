@@ -157,19 +157,26 @@ export class MatchesService {
     const round = normalizeRound(dto.round);
     await this.assertPlayers(dto.tournamentId, dto.teamA, dto.teamB, false);
     await this.assertGroup(dto.tournamentId, round, [dto.teamA, dto.teamB]);
+    await this.assertNotDuplicate(dto.tournamentId, round, dto.teamA, dto.teamB);
     // A knockout round holds a fixed number of matches; past that, a new one
     // would duplicate a bracket slot.
     const size = roundSize(round);
     if (size > 0) {
-      const taken = await this.prisma.match.count({
+      const taken = await this.prisma.match.findMany({
         where: { tournamentId: dto.tournamentId, round },
+        select: { position: true },
       });
-      if (taken >= size / 2) {
+      if (taken.length >= size / 2) {
         throw new BadRequestException(
           `${round} already has all ${size / 2} of its ${size === 2 ? "match" : "matches"}. Set the players on one of them instead.`,
         );
       }
-      return this.prisma.match.create({ data: { ...dto, round, position: taken } });
+      // Fill the first empty bracket slot, so a deleted match comes back in
+      // its own place and its winner still feeds the right next-round side.
+      const used = new Set(taken.map((m) => m.position));
+      let position = 0;
+      while (used.has(position)) position++;
+      return this.prisma.match.create({ data: { ...dto, round, position } });
     }
     return this.prisma.match.create({ data: { ...dto, round } });
   }
@@ -196,6 +203,13 @@ export class MatchesService {
         dto.teamA ?? found.teamA,
         dto.teamB ?? found.teamB,
       ]);
+      await this.assertNotDuplicate(
+        found.tournamentId,
+        round,
+        dto.teamA ?? found.teamA,
+        dto.teamB ?? found.teamB,
+        id,
+      );
     }
     if (status === "completed" && scoreA != null && scoreB != null) {
       assertDecisive(round, scoreA, scoreB);
@@ -537,6 +551,40 @@ export class MatchesService {
           ? `"${player}" plays in ${own}, not ${round}.`
           : `"${player}" isn't in any group of this tournament.`,
       );
+    }
+  }
+
+  /**
+   * Each pair meets once in a group, and each player has one place in a
+   * knockout round. A second match would count a result twice or put a player
+   * on two paths through the bracket. `exceptId` is the match being edited.
+   */
+  private async assertNotDuplicate(
+    tournamentId: string,
+    round: string,
+    teamA: string,
+    teamB: string,
+    exceptId?: string,
+  ) {
+    const others = await this.prisma.match.findMany({
+      where: { tournamentId, round, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      select: { teamA: true, teamB: true },
+    });
+    if (round.startsWith("Group ")) {
+      if (!teamA || !teamB) return;
+      const pair = [teamA, teamB].sort().join("\u0000");
+      if (others.some((m) => [m.teamA, m.teamB].sort().join("\u0000") === pair)) {
+        throw new BadRequestException(
+          `${teamA} and ${teamB} already have a ${round} match. Edit that one instead.`,
+        );
+      }
+      return;
+    }
+    if (roundSize(round) === 0) return;
+    for (const player of [teamA, teamB].filter(Boolean)) {
+      if (others.some((m) => m.teamA === player || m.teamB === player)) {
+        throw new BadRequestException(`${player} already plays in the ${round}.`);
+      }
     }
   }
 
