@@ -27,7 +27,19 @@ const KNOCKOUT_ROUNDS = [
   "Round of 32",
   "Round of 64",
 ];
-const GROUP_ROUNDS = ["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => `Group ${g}`);
+/** Each group the draw made, with its players, e.g. "Group A" → [..]. */
+function groupMembers(matches: Match[]): Map<string, string[]> {
+  const groups = new Map<string, Set<string>>();
+  for (const m of matches) {
+    if (!m.round.startsWith("Group ")) continue;
+    const g = groups.get(m.round) ?? new Set<string>();
+    for (const t of [m.teamA, m.teamB]) if (t) g.add(t);
+    groups.set(m.round, g);
+  }
+  return new Map(
+    [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, [...v].sort()]),
+  );
+}
 
 /** Players in a knockout round: "Final" → 2, "Semifinals" → 4, "Round of 16" → 16. */
 function roundSize(round: string): number {
@@ -260,6 +272,10 @@ export function MatchesAdmin() {
   }
 
   const selectedTournament = tournaments.find((t) => t.id === selected);
+  // A group match can only be added to a group the draw made, between two of
+  // its own players.
+  const groups = groupMembers(matches);
+  const newMatchPlayers = groups.get(newMatch.round) ?? players;
   const isRacing = selectedTournament?.format === "racing";
 
   const scoreInput =
@@ -509,9 +525,15 @@ export function MatchesAdmin() {
               label="ROUND"
               required
               value={newMatch.round}
-              onChange={(e) =>
-                setNewMatch((m) => ({ ...m, round: e.target.value }))
-              }
+              onChange={(e) => {
+                const round = e.target.value;
+                const pool = groups.get(round) ?? players;
+                setNewMatch((m) => ({
+                  round,
+                  teamA: pool.includes(m.teamA) ? m.teamA : "",
+                  teamB: pool.includes(m.teamB) ? m.teamB : "",
+                }));
+              }}
             >
               <option value="" disabled>
                 Choose a round
@@ -523,10 +545,9 @@ export function MatchesAdmin() {
                   </option>
                 ))}
               </optgroup>
-              {tournaments.find((t) => t.id === selected)?.format ===
-                "group_knockout" && (
+              {groups.size > 0 && (
                 <optgroup label="Group stage">
-                  {GROUP_ROUNDS.map((r) => (
+                  {[...groups.keys()].map((r) => (
                     <option key={r} value={r}>
                       {r}
                     </option>
@@ -534,8 +555,8 @@ export function MatchesAdmin() {
                 </optgroup>
               )}
             </Select>
-            {/* Picked from the confirmed players, so a typo can't send a
-                result (and its points) to the wrong name. */}
+            {/* Picked from the confirmed players (for a group, that group's
+                players), so a typo can't send a result to the wrong name. */}
             <div className="grid grid-cols-2 gap-4">
               {(["teamA", "teamB"] as const).map((side) => (
                 <Select
@@ -550,7 +571,7 @@ export function MatchesAdmin() {
                   <option value="" disabled>
                     Choose a player
                   </option>
-                  {players.map((p) => (
+                  {newMatchPlayers.map((p) => (
                     <option
                       key={p}
                       value={p}

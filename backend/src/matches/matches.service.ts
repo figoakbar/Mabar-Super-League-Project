@@ -156,6 +156,7 @@ export class MatchesService {
     await this.ensureTournament(dto.tournamentId);
     const round = normalizeRound(dto.round);
     await this.assertPlayers(dto.tournamentId, dto.teamA, dto.teamB, false);
+    await this.assertGroup(dto.tournamentId, round, [dto.teamA, dto.teamB]);
     // A knockout round holds a fixed number of matches; past that, a new one
     // would duplicate a bracket slot.
     const size = roundSize(round);
@@ -189,6 +190,12 @@ export class MatchesService {
         dto.teamB ?? found.teamB,
         true,
       );
+    }
+    if (dto.round !== undefined || dto.teamA !== undefined || dto.teamB !== undefined) {
+      await this.assertGroup(found.tournamentId, round, [
+        dto.teamA ?? found.teamA,
+        dto.teamB ?? found.teamB,
+      ]);
     }
     if (status === "completed" && scoreA != null && scoreB != null) {
       assertDecisive(round, scoreA, scoreB);
@@ -489,6 +496,46 @@ export class MatchesService {
     if (missing !== undefined) {
       throw new BadRequestException(
         `"${missing}" isn't a confirmed participant of this tournament.`,
+      );
+    }
+  }
+
+  /**
+   * A group match belongs to a group the draw made, between two of that
+   * group's players. Otherwise a stray "Group C" would put players in two
+   * groups and leave an odd number of groups, which can't seat the knockout.
+   */
+  private async assertGroup(tournamentId: string, round: string, players: string[]) {
+    if (!round.startsWith("Group ")) return;
+    const rows = await this.prisma.match.findMany({
+      where: { tournamentId, round: { startsWith: "Group " } },
+      select: { round: true, teamA: true, teamB: true },
+    });
+    const groups = new Map<string, Set<string>>();
+    for (const m of rows) {
+      const g = groups.get(m.round) ?? new Set<string>();
+      for (const t of [m.teamA, m.teamB]) if (t) g.add(t);
+      groups.set(m.round, g);
+    }
+    const members = groups.get(round);
+    if (!members) {
+      if (groups.size === 0) {
+        throw new BadRequestException(
+          "This tournament has no group stage. Groups come from the draw.",
+        );
+      }
+      const names = [...groups.keys()].sort().join(", ");
+      throw new BadRequestException(
+        `${round} isn't part of this tournament's draw. Its groups are ${names}.`,
+      );
+    }
+    for (const player of players.filter(Boolean)) {
+      if (members.has(player)) continue;
+      const own = [...groups].find(([, g]) => g.has(player))?.[0];
+      throw new BadRequestException(
+        own
+          ? `"${player}" plays in ${own}, not ${round}.`
+          : `"${player}" isn't in any group of this tournament.`,
       );
     }
   }
