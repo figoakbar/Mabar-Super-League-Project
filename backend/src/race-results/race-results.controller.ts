@@ -13,6 +13,7 @@ import { Public, Roles } from "../auth/auth.decorators";
 
 import {
   CreateRaceResultDto,
+  FillRaceResultsDto,
   UpdateRaceResultDto,
 } from "./dto/race-result.dto";
 import { RaceResultsService } from "./race-results.service";
@@ -34,6 +35,13 @@ export class RaceResultsController {
   @Post()
   create(@Body() dto: CreateRaceResultDto) {
     return this.raceResults.create(dto);
+  }
+
+  /** Add every confirmed participant missing from a session, unplaced. */
+  @Roles("admin")
+  @Post("fill")
+  fill(@Body() dto: FillRaceResultsDto) {
+    return this.raceResults.fill(dto);
   }
 
   @Roles("admin")

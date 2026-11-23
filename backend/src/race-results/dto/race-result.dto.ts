@@ -40,7 +40,8 @@ export class UpdateRaceResultDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  position?: number;
+  // null clears the position (a driver who didn't finish).
+  position?: number | null;
 
   @IsOptional()
   @IsString()
@@ -49,4 +50,13 @@ export class UpdateRaceResultDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class FillRaceResultsDto {
+  @IsString()
+  @MinLength(1)
+  tournamentId: string;
+
+  @IsIn(SESSIONS)
+  session: string;
 }

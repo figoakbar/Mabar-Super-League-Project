@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 
 import {
   api,
@@ -10,6 +10,7 @@ import {
   type RaceSession,
 } from "@/lib/admin/api";
 import { btn, ErrorNote } from "@/components/admin/ui";
+import { LAP_TIME_HINT, normalizeLapTime } from "@/lib/tournaments/lap-time";
 
 const sessionLabel: Record<RaceSession, string> = {
   practice: "Practice",
@@ -27,24 +28,32 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Confirmed participants: the only names a session can hold.
+  const [entrants, setEntrants] = useState<string[]>([]);
   const [newDriver, setNewDriver] = useState("");
   const [adding, setAdding] = useState(false);
 
-  function hydrate(list: RaceResult[]) {
+  /**
+   * Show `list`. Rows being typed in keep their unsaved edits; only `fresh`
+   * (the row just saved) and rows new to the list take the stored values.
+   */
+  function hydrate(list: RaceResult[], fresh?: string) {
     setRows(list);
-    setDrafts(
+    setDrafts((prev) =>
       Object.fromEntries(
         list.map((r) => [
           r.id,
-          { position: r.position?.toString() ?? "", lapTime: r.lapTime },
+          r.id !== fresh && prev[r.id]
+            ? prev[r.id]
+            : { position: r.position?.toString() ?? "", lapTime: r.lapTime },
         ]),
       ),
     );
   }
 
-  async function load() {
+  async function load(fresh?: string) {
     try {
-      hydrate(await api.listRaceResults(tournamentId));
+      hydrate(await api.listRaceResults(tournamentId), fresh);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load results");
     }
@@ -54,8 +63,15 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
     let active = true;
     (async () => {
       try {
-        const list = await api.listRaceResults(tournamentId);
-        if (active) hydrate(list);
+        const [list, participants] = await Promise.all([
+          api.listRaceResults(tournamentId),
+          api.listParticipants(tournamentId),
+        ]);
+        if (!active) return;
+        hydrate(list);
+        setEntrants(
+          participants.filter((p) => p.status === "confirmed").map((p) => p.team),
+        );
       } catch (e) {
         if (active)
           setError(e instanceof Error ? e.message : "Failed to load results");
@@ -69,31 +85,53 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
   }, [tournamentId]);
 
   const shown = rows.filter((r) => r.session === session);
+  const inSession = new Set(shown.map((r) => r.driver));
+  const missing = entrants.filter((t) => !inSession.has(t));
 
   async function save(r: RaceResult) {
     const d = drafts[r.id];
     setError(null);
+    // Checked here too so a typo is caught before the round trip; the API has
+    // the final say and stores the tidied form.
+    if (normalizeLapTime(d?.lapTime ?? "") === null) {
+      setError(`${r.driver}: ${LAP_TIME_HINT}`);
+      return;
+    }
     try {
       await api.updateRaceResult(r.id, {
-        position: d?.position ? Number(d.position) : undefined,
+        // An empty box clears the position: the driver is unclassified.
+        position: d?.position ? Number(d.position) : null,
         lapTime: d?.lapTime ?? "",
       });
-      await load();
+      await load(r.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     }
   }
 
+  async function addAll() {
+    setAdding(true);
+    setError(null);
+    try {
+      await api.fillRaceResults(tournamentId, session);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Add failed");
+    } finally {
+      setAdding(false);
+    }
+  }
+
   async function addDriver(e: React.FormEvent) {
     e.preventDefault();
-    if (!newDriver.trim()) return;
+    if (!newDriver) return;
     setAdding(true);
     setError(null);
     try {
       await api.createRaceResult({
         tournamentId,
         session,
-        driver: newDriver.trim(),
+        driver: newDriver,
       });
       setNewDriver("");
       await load();
@@ -140,18 +178,50 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
       </div>
 
       {/* Add driver */}
-      <form onSubmit={addDriver} className="flex flex-wrap gap-2">
-        <input
-          value={newDriver}
-          onChange={(e) => setNewDriver(e.target.value)}
-          placeholder={`Add driver to ${sessionLabel[session]}…`}
-          className="min-w-[220px] flex-1 rounded-lg border border-white/[0.12] bg-[#0A0B0D] px-3.5 py-2.5 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-[#FFB800]/60"
-        />
-        <button type="submit" disabled={adding} className={btn.primary}>
-          <Plus className="mr-1.5 inline size-4 align-[-2px]" />
-          {adding ? "Adding…" : "Add driver"}
-        </button>
-      </form>
+      {/* Drivers come from the confirmed participants, so a typo can't send
+          points to a name nobody holds. */}
+      {missing.length > 0 ? (
+        <form onSubmit={addDriver} className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={addAll}
+            disabled={adding}
+            className={btn.primary}
+          >
+            <Users className="mr-1.5 inline size-4 align-[-2px]" />
+            {adding
+              ? "Adding…"
+              : `Add all confirmed drivers (${missing.length})`}
+          </button>
+          <select
+            aria-label={`Driver to add to ${sessionLabel[session]}`}
+            value={newDriver}
+            onChange={(e) => setNewDriver(e.target.value)}
+            className="min-w-[220px] flex-1 rounded-lg border border-white/[0.12] bg-[#0A0B0D] px-3.5 py-2.5 text-sm font-semibold text-white outline-none focus:border-[#FFB800]/60"
+          >
+            <option value="">Or add one driver to {sessionLabel[session]}…</option>
+            {missing.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={adding || !newDriver}
+            className={btn.ghost}
+          >
+            <Plus className="mr-1.5 inline size-4 align-[-2px]" />
+            Add driver
+          </button>
+        </form>
+      ) : (
+        <p className="text-[12.5px] font-semibold text-white/45">
+          {entrants.length === 0
+            ? "No confirmed participants yet. Confirm entries in Registrations first."
+            : `Every confirmed participant is in ${sessionLabel[session]}. Leave a position empty for a driver who didn't finish.`}
+        </p>
+      )}
 
       {/* Results table */}
       <div className="overflow-x-auto rounded-xl border border-white/[0.08] bg-[#101114]">
@@ -203,6 +273,8 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
                   <td className="px-5 py-3">
                     <input
                       aria-label={`${r.driver} lap time`}
+                      aria-invalid={normalizeLapTime(drafts[r.id]?.lapTime ?? "") === null}
+                      title="1:32.451, or type the digits: 132451"
                       placeholder="1:32.451"
                       value={drafts[r.id]?.lapTime ?? ""}
                       onChange={(e) =>
@@ -212,6 +284,11 @@ export function RaceResultsAdmin({ tournamentId }: { tournamentId: string }) {
                         }))
                       }
                       className={`${cell} w-32`}
+                      style={
+                        normalizeLapTime(drafts[r.id]?.lapTime ?? "") === null
+                          ? { borderColor: "#E07A72" }
+                          : undefined
+                      }
                     />
                   </td>
                   <td className="px-5 py-3">

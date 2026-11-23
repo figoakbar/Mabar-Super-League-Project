@@ -575,6 +575,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  /** Add every confirmed participant missing from a session, unplaced. */
+  fillRaceResults: (tournamentId: string, session: RaceSession) =>
+    request<{ added: number }>("/race-results/fill", {
+      method: "POST",
+      body: JSON.stringify({ tournamentId, session }),
+    }),
   updateRaceResult: (id: string, data: Partial<RaceResult>) =>
     request<RaceResult>(`/race-results/${id}`, {
       method: "PATCH",
