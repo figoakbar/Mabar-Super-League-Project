@@ -185,7 +185,6 @@ export class MatchesService {
     const found = await this.prisma.match.findUnique({ where: { id } });
     if (!found) throw new NotFoundException(`Match ${id} not found`);
     const round = dto.round !== undefined ? normalizeRound(dto.round) : found.round;
-    // Re-check the result whenever it (or the round it belongs to) changes.
     const scoreA = dto.scoreA ?? found.scoreA;
     const scoreB = dto.scoreB ?? found.scoreB;
     const status = dto.status ?? found.status;
@@ -211,12 +210,49 @@ export class MatchesService {
         id,
       );
     }
-    if (status === "completed" && scoreA != null && scoreB != null) {
+    const teamA = dto.teamA ?? found.teamA;
+    const teamB = dto.teamB ?? found.teamB;
+    const touchesResult =
+      dto.scoreA !== undefined || dto.scoreB !== undefined || dto.status !== undefined;
+    const cleared: { scoreA?: null; scoreB?: null } = {};
+    // The same rules as /score, so this route can't record what that one refuses.
+    if (found.status === BYE) {
+      if (touchesResult || dto.teamB) {
+        throw new BadRequestException(
+          "A bye has no score — the player goes straight through.",
+        );
+      }
+    } else if (status === "completed") {
+      if (!teamA || !teamB) {
+        throw new BadRequestException(
+          "Both players must be known before this match can have a score.",
+        );
+      }
+      if (scoreA == null || scoreB == null) {
+        throw new BadRequestException("A completed match needs both scores.");
+      }
+      const swapped =
+        (dto.teamA !== undefined && dto.teamA !== found.teamA) ||
+        (dto.teamB !== undefined && dto.teamB !== found.teamB);
+      if (found.status === "completed" && swapped) {
+        throw new BadRequestException(
+          'This match already has a result. Changing its players would give that result to someone else; send "status": "scheduled" with the change to clear it.',
+        );
+      }
       assertDecisive(round, scoreA, scoreB);
+    } else if (touchesResult) {
+      // Scheduled: no result. Setting it back clears the old score.
+      if (dto.scoreA != null || dto.scoreB != null) {
+        throw new BadRequestException(
+          'A scheduled match has no score. Send "status": "completed" with the scores, or use /score.',
+        );
+      }
+      cleared.scoreA = null;
+      cleared.scoreB = null;
     }
     const row = await this.prisma.match.update({
       where: { id },
-      data: { ...dto, ...(dto.round !== undefined ? { round } : {}) },
+      data: { ...dto, ...cleared, ...(dto.round !== undefined ? { round } : {}) },
     });
     await this.advance(row);
     return row;
