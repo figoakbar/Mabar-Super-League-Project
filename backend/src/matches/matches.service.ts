@@ -254,7 +254,14 @@ export class MatchesService {
       where: { id },
       data: { ...dto, ...cleared, ...(dto.round !== undefined ? { round } : {}) },
     });
-    await this.advance(row);
+    const size = roundSize(row.round);
+    if (found.status === "completed" && row.status !== "completed" && size > 2) {
+      // Reopened: its winner no longer goes through, so take them back out
+      // of the next round (clearing anything they had played there).
+      await this.place(row.tournamentId, size, row.position, "");
+    } else {
+      await this.advance(row);
+    }
     return row;
   }
 
